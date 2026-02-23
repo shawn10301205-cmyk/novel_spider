@@ -812,6 +812,7 @@ body {
     background: linear-gradient(135deg, rgba(255, 87, 34, 0.12), rgba(255, 152, 0, 0.10));
     border: 1px solid rgba(255, 87, 34, 0.2);
     white-space: nowrap;
+    margin-top: 4px;
 }
 
 [data-theme="dark"] .novel-heat-badge {

@@ -1048,9 +1048,9 @@ function renderNovelCard(novel, delay, globalRank) {
                 </span>
                 ${subHtml}
             </div>
+            ${heatHtml}
         </div>
         <div class="novel-tags">
-            ${heatHtml}
             <span class="tag ${genderClass}">${escapeHtml(novel.gender || '-')}</span>
             ${novel.source ? `<span class="tag tag-source">${escapeHtml(novel.source)}</span>` : ''}
         </div>
