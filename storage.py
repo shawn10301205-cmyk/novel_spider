@@ -1,4 +1,4 @@
-"""数据存储层 - 按天存储抓取结果到 data/ 目录"""
+"""数据存储层 - 按天存储抓取结果到 data/{YYYY-MM-DD}/ 目录"""
 
 import json
 import os
@@ -12,12 +12,20 @@ from models.novel import NovelRank
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
-def _ensure_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
+def _ensure_dir(day: Optional[str] = None):
+    day = day or today_str()
+    day_dir = os.path.join(DATA_DIR, day)
+    os.makedirs(day_dir, exist_ok=True)
+    return day_dir
 
 
 def _data_path(source: str, day: str) -> str:
-    """数据文件路径: data/{source}_{YYYY-MM-DD}.json"""
+    """数据文件路径: data/{YYYY-MM-DD}/{source}.json"""
+    return os.path.join(DATA_DIR, day, f"{source}.json")
+
+
+def _legacy_data_path(source: str, day: str) -> str:
+    """兼容旧格式: data/{source}_{YYYY-MM-DD}.json"""
     return os.path.join(DATA_DIR, f"{source}_{day}.json")
 
 
@@ -28,13 +36,14 @@ def today_str() -> str:
 def has_data(source: str, day: Optional[str] = None) -> bool:
     """检查指定数据源某天是否有数据"""
     day = day or today_str()
-    return os.path.exists(_data_path(source, day))
+    # 先查新路径, 再查旧路径
+    return os.path.exists(_data_path(source, day)) or os.path.exists(_legacy_data_path(source, day))
 
 
 def save_data(source: str, novels: list[NovelRank], day: Optional[str] = None):
-    """保存抓取结果"""
-    _ensure_dir()
+    """保存抓取结果到日期文件夹"""
     day = day or today_str()
+    _ensure_dir(day)
     path = _data_path(source, day)
 
     payload = {
@@ -52,12 +61,16 @@ def save_data(source: str, novels: list[NovelRank], day: Optional[str] = None):
 
 
 def load_data(source: str, day: Optional[str] = None) -> list[dict]:
-    """加载某天某数据源的数据"""
+    """加载某天某数据源的数据, 兼容新旧两种路径"""
     day = day or today_str()
-    path = _data_path(source, day)
 
+    # 优先新路径
+    path = _data_path(source, day)
     if not os.path.exists(path):
-        return []
+        # 尝试旧路径
+        path = _legacy_data_path(source, day)
+        if not os.path.exists(path):
+            return []
 
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -68,11 +81,16 @@ def load_data(source: str, day: Optional[str] = None) -> list[dict]:
 
 def list_dates() -> list[str]:
     """列出所有有数据的日期"""
-    _ensure_dir()
+    os.makedirs(DATA_DIR, exist_ok=True)
     dates = set()
-    for fname in os.listdir(DATA_DIR):
-        if fname.endswith(".json"):
-            parts = fname.rsplit("_", 1)
+    for item in os.listdir(DATA_DIR):
+        item_path = os.path.join(DATA_DIR, item)
+        # 新格式: data/2026-02-23/ (目录)
+        if os.path.isdir(item_path) and len(item) == 10 and item[4] == '-':
+            dates.add(item)
+        # 旧格式: data/fanqie_2026-02-23.json (文件)
+        elif item.endswith(".json"):
+            parts = item.rsplit("_", 1)
             if len(parts) == 2:
                 day = parts[1].replace(".json", "")
                 dates.add(day)

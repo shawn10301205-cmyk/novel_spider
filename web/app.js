@@ -10,7 +10,7 @@ const state = {
     source: '',
     gender: '',
     period: '',
-    sort: 'rank',
+    sort: 'heat',
     selectedCategories: [],
     categories: [],
     sources: [],
@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 排序切换 - 立即客户端重排不重新请求
     const sortSel = document.getElementById('sortSelect');
     if (sortSel) {
+        sortSel.value = state.sort; // 默认按热度
         sortSel.addEventListener('change', () => {
             state.sort = sortSel.value;
             if (state.results.length > 0) {
@@ -103,6 +104,11 @@ function switchTab(tab) {
 
     document.getElementById('tabDashboard').style.display = tab === 'dashboard' ? '' : 'none';
     document.getElementById('tabRank').style.display = tab === 'rank' ? '' : 'none';
+
+    // 排行榜默认自动加载全部数据
+    if (tab === 'rank' && state.results.length === 0) {
+        doScrape();
+    }
 }
 
 // ============================================================
