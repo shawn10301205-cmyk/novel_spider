@@ -650,7 +650,7 @@ function renderResults(data) {
         const sorted = [...data].sort((a, b) => parseHeatValue(b) - parseHeatValue(a));
         let html = '<div class="category-group fade-in"><div class="category-group-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>按热度排序</h3><span class="badge">' + sorted.length + '本</span></div><div class="novel-list">';
         let delay = 0;
-        for (const novel of sorted) { delay += 20; html += renderNovelCard(novel, delay); }
+        sorted.forEach((novel, idx) => { delay += 20; html += renderNovelCard(novel, delay, idx + 1); });
         html += '</div></div>';
         container.innerHTML = html;
         return;
@@ -668,6 +668,7 @@ function renderResults(data) {
 
     let html = '';
     let delay = 0;
+    let globalIdx = 0;
 
     for (const [source, categories] of Object.entries(bySource)) {
         const sourceCount = Object.values(categories).reduce((s, arr) => s + arr.length, 0);
@@ -687,7 +688,7 @@ function renderResults(data) {
                     <h3>${escapeHtml(category)}</h3>
                     <span class="badge">${novels.length}本</span>
                 </div><div class="novel-list">`;
-            for (const novel of novels) { delay += 20; html += renderNovelCard(novel, delay); }
+            for (const novel of novels) { globalIdx++; delay += 20; html += renderNovelCard(novel, delay, globalIdx); }
             html += `</div></div>`;
             delay += 30;
         }
@@ -709,8 +710,9 @@ function parseHeatValue(novel) {
     return val;
 }
 
-function renderNovelCard(novel, delay) {
-    const rankClass = novel.rank <= 3 ? `rank-${novel.rank}` : 'rank-other';
+function renderNovelCard(novel, delay, globalRank) {
+    const displayRank = globalRank || novel.rank;
+    const rankClass = displayRank <= 3 ? `rank-${displayRank}` : 'rank-other';
     const genderClass = novel.gender === '男频' ? 'tag-gender-male' : 'tag-gender-female';
     const bookUrl = novel.book_url || '#';
     const titleLink = bookUrl !== '#'
@@ -729,7 +731,7 @@ function renderNovelCard(novel, delay) {
 
     return `
     <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms">
-        <div class="rank-badge ${rankClass}">${novel.rank}</div>
+        <div class="rank-badge ${rankClass}">${displayRank}</div>
         <div class="novel-info">
             <div class="novel-title">${titleLink}</div>
             <div class="novel-meta">
