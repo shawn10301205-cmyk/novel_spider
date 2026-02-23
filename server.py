@@ -656,4 +656,4 @@ def api_settings_save():
 if __name__ == "__main__":
     # 启动时自动调度
     _schedule_next()
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(host="0.0.0.0", port=8081, debug=True)
