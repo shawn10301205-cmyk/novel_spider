@@ -1463,6 +1463,17 @@ body {
     color: var(--md-on-surface);
 }
 
+.cross-col-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.cross-col-title a:hover {
+    color: var(--md-primary);
+    text-decoration: underline;
+}
+
 .cross-col-author,
 .cross-col-cat {
     font-size: 0.85rem;

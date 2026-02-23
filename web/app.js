@@ -659,11 +659,15 @@ function renderCrossPlatform(crossPlatform) {
             `<span class="tag tag-source">${escapeHtml(s)}</span>`
         ).join('');
 
+        const titleLink = book.book_url
+            ? `<a href="${escapeHtml(book.book_url)}" target="_blank" rel="noopener">${escapeHtml(book.title)}</a>`
+            : escapeHtml(book.title);
+
         html += `<div class="cross-row stagger-in" style="animation-delay:${idx * 30}ms">
             <span class="cross-col cross-col-rank">
                 <span class="cross-rank ${idx < 3 ? 'cross-rank-top' : ''}">${idx + 1}</span>
             </span>
-            <span class="cross-col cross-col-title">${escapeHtml(book.title)}</span>
+            <span class="cross-col cross-col-title">${titleLink}</span>
             <span class="cross-col cross-col-author">${escapeHtml(book.author || '-')}</span>
             <span class="cross-col cross-col-cat">${escapeHtml(book.category || '-')}</span>
             <span class="cross-col cross-col-sources">${sourceTags}</span>

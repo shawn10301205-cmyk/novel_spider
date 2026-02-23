@@ -349,6 +349,7 @@ def api_dashboard():
                 "title": title,
                 "author": info["data"].get("author", ""),
                 "category": info["data"].get("category", ""),
+                "book_url": info["data"].get("book_url", ""),
                 "sources": sorted(list(info["sources"])),
                 "source_count": len(info["sources"]),
             })
