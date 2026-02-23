@@ -216,6 +216,21 @@ class FanqieScraper(BaseScraper):
                     if latest_chapter.startswith("最近更新："):
                         latest_chapter = latest_chapter[5:]
 
+                # 在读人数 (热度)
+                extra = {}
+                count_span = item.select_one('.book-item-count')
+                if count_span:
+                    count_text = count_span.get_text(strip=True)
+                    # 格式: "在读：3.2万"
+                    extra["heat"] = count_text
+
+                # 简介
+                desc_div = item.select_one('.desc.abstract, .desc')
+                if desc_div:
+                    intro = desc_div.get_text(strip=True)
+                    if intro:
+                        extra["intro"] = intro[:200]
+
                 if title:
                     novels.append(NovelRank(
                         rank=idx,
@@ -228,6 +243,7 @@ class FanqieScraper(BaseScraper):
                         book_url=book_url,
                         author_url=author_url,
                         source=self.SOURCE_NAME,
+                        extra=extra,
                     ))
             except Exception as e:
                 print(f"  ⚠ 解析第{idx}项失败: {e}")

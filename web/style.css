@@ -778,6 +778,21 @@ body {
     max-width: 300px;
 }
 
+.novel-extra {
+    font-size: 0.78rem;
+    color: var(--md-tertiary);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.novel-intro {
+    font-size: 0.75rem;
+    color: var(--md-on-surface-variant);
+    margin-top: 4px;
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
 .novel-tags {
     display: flex;
     flex-direction: column;

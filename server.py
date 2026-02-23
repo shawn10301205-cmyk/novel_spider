@@ -325,6 +325,7 @@ def api_category_books():
                     "book_url": novel.get("book_url", ""),
                     "rank": novel.get("rank", 0),
                     "latest_chapter": novel.get("latest_chapter", ""),
+                    "extra": novel.get("extra", {}),
                 })
 
     return jsonify({

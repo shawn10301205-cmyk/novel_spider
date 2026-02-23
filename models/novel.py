@@ -21,11 +21,7 @@ class NovelRank:
 
     def to_dict(self) -> dict:
         """转换为字典"""
-        result = asdict(self)
-        # 合并 extra 字段到顶层
-        extra = result.pop("extra", {})
-        result.update(extra)
-        return result
+        return asdict(self)
 
     def __str__(self) -> str:
         return f"[{self.rank}] {self.title} - {self.author} ({self.category})"

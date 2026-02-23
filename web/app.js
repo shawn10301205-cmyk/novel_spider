@@ -389,6 +389,13 @@ async function openCategoryDetail(category) {
                 ? `<a href="${escapeHtml(book.book_url)}" target="_blank" rel="noopener">${escapeHtml(book.title)}</a>`
                 : escapeHtml(book.title);
             const genderClass = book.gender === '男频' ? 'tag-gender-male' : 'tag-gender-female';
+            const extra = book.extra || {};
+            const extraParts = [];
+            if (extra.heat) extraParts.push(`🔥 ${escapeHtml(extra.heat)}`);
+            if (extra.word_count) extraParts.push(`📝 ${escapeHtml(extra.word_count)}`);
+            if (extra.status) extraParts.push(escapeHtml(extra.status));
+            const extraLine = extraParts.length ? `<div class="novel-extra">${extraParts.join(' · ')}</div>` : '';
+            const introLine = extra.intro ? `<div class="novel-intro">${escapeHtml(extra.intro.substring(0, 100))}${extra.intro.length > 100 ? '...' : ''}</div>` : '';
 
             html += `<div class="modal-book-card glass-card">
                 <div class="modal-book-rank">${book.rank || '-'}</div>
@@ -398,6 +405,8 @@ async function openCategoryDetail(category) {
                         <span>✍ ${escapeHtml(book.author || '未知作者')}</span>
                         <span>📖 ${escapeHtml(book.latest_chapter || '-')}</span>
                     </div>
+                    ${extraLine}
+                    ${introLine}
                 </div>
                 <div class="modal-book-tags">
                     <span class="tag ${genderClass}">${escapeHtml(book.gender || '-')}</span>
@@ -638,6 +647,19 @@ function renderNovelCard(novel, delay) {
         ? `<a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener">${escapeHtml(novel.title)}</a>`
         : escapeHtml(novel.title);
 
+    const extra = novel.extra || {};
+    let extraHtml = '';
+    if (extra.heat || extra.word_count || extra.status) {
+        const parts = [];
+        if (extra.heat) parts.push(`🔥 ${escapeHtml(extra.heat)}`);
+        if (extra.word_count) parts.push(`📝 ${escapeHtml(extra.word_count)}`);
+        if (extra.status) parts.push(escapeHtml(extra.status));
+        extraHtml = `<div class="novel-extra">${parts.join(' · ')}</div>`;
+    }
+    const introHtml = extra.intro
+        ? `<div class="novel-intro">${escapeHtml(extra.intro.substring(0, 80))}${extra.intro.length > 80 ? '...' : ''}</div>`
+        : '';
+
     return `
     <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms">
         <div class="rank-badge ${rankClass}">${novel.rank}</div>
@@ -653,7 +675,9 @@ function renderNovelCard(novel, delay) {
                     ${escapeHtml(novel.category || '-')}
                 </span>
             </div>
+            ${extraHtml}
             ${novel.latest_chapter ? `<div class="novel-chapter">📖 ${escapeHtml(novel.latest_chapter)}</div>` : ''}
+            ${introHtml}
         </div>
         <div class="novel-tags">
             <span class="tag ${genderClass}">${escapeHtml(novel.gender || '-')}</span>
