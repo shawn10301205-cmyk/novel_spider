@@ -1,6 +1,6 @@
 /**
- * 小说排行榜前端 - Material 3 磨砂玻璃风格
- * 支持多数据源切换、汇总模式、按天缓存
+ * 小说排行榜前端 - 市场分析看板 + 排行榜
+ * 支持多数据源、按天缓存、一键全量获取
  */
 
 // ============================================================
@@ -18,6 +18,22 @@ const state = {
     loading: false,
     cached: false,
     date: '',
+    currentTab: 'dashboard',
+    dashboard: null,
+};
+
+// ============================================================
+// 颜色调色板
+// ============================================================
+const COLORS = [
+    '#6750A4', '#7D5260', '#006B5E', '#4758A9', '#8B5000',
+    '#6D5F00', '#A93F46', '#00658E', '#6750A4', '#006D3B',
+    '#7C5800', '#5B5F72', '#9A4520', '#006874', '#6B5778',
+];
+const GENDER_COLORS = {
+    '男频': '#4758A9',
+    '女频': '#A93F46',
+    '全部': '#6750A4',
 };
 
 // ============================================================
@@ -29,8 +45,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadSources();
     loadCategories();
-    // 自动加载当天数据
-    autoLoad();
+    // 自动加载看板
+    checkAndLoadDashboard();
 });
 
 // ============================================================
@@ -60,20 +76,245 @@ async function loadCategories() {
         const params = state.source ? `?source=${state.source}` : '';
         const res = await api(`/api/categories${params}`);
         state.categories = res.data || [];
-        renderCategoryChips();
     } catch (e) {
-        document.getElementById('categoryChips').innerHTML = '<span class="loading-text">加载失败</span>';
+        console.error('加载分类失败:', e);
     }
 }
 
-async function autoLoad() {
-    // 检查是否有缓存，自动加载
-    const hasCached = state.sources.some(s => s.has_today);
-    if (hasCached) {
-        await doScrape(false); // 不强制刷新，优先用缓存
+// ============================================================
+// Tab 切换
+// ============================================================
+function switchTab(tab) {
+    state.currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+    document.getElementById('tabDashboard').style.display = tab === 'dashboard' ? '' : 'none';
+    document.getElementById('tabRank').style.display = tab === 'rank' ? '' : 'none';
+}
+
+// ============================================================
+// 市场看板
+// ============================================================
+async function checkAndLoadDashboard() {
+    const allHaveData = state.sources.length > 0 && state.sources.every(s => s.has_today);
+    const anyHasData = state.sources.some(s => s.has_today);
+
+    if (anyHasData) {
+        updateFetchStatus('有今日数据', `${state.sources.filter(s => s.has_today).length}/${state.sources.length} 个平台有数据`, true);
+        await loadDashboard();
+    } else {
+        updateFetchStatus('暂无今日数据', '点击「全量获取数据」开始抓取所有平台排行榜', false);
+        document.getElementById('dashboardContent').style.display = 'none';
+        document.getElementById('dashEmpty').style.display = '';
     }
 }
 
+function updateFetchStatus(title, desc, hasData) {
+    document.getElementById('fetchTitle').textContent = title;
+    document.getElementById('fetchDesc').textContent = desc;
+    const icon = document.querySelector('.fetch-icon');
+    icon.style.background = hasData ? 'var(--md-primary-container)' : 'var(--md-surface-variant)';
+    icon.style.color = hasData ? 'var(--md-on-primary-container)' : 'var(--md-on-surface-variant)';
+}
+
+async function fetchAllData(force = false) {
+    const btn = document.getElementById('btnFetchAll');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('dashLoadingSection').style.display = '';
+    document.getElementById('dashboardContent').style.display = 'none';
+    document.getElementById('dashEmpty').style.display = 'none';
+
+    const forceParam = force ? '?force=1' : '';
+    document.getElementById('dashLoadingMsg').textContent = force ? '正在强制刷新所有平台数据...' : '正在获取所有平台排行榜数据...';
+
+    try {
+        const res = await api(`/api/fetch-all${forceParam}`, { method: 'POST' });
+        const total = res.total || 0;
+        const errors = res.errors || [];
+
+        showToast('success', `已获取 ${total} 条数据（${Object.keys(res.data || {}).length} 个平台）`);
+        if (errors.length > 0) {
+            showToast('error', `部分平台失败: ${errors.join('; ')}`);
+        }
+
+        // 刷新数据源状态
+        await loadSources();
+        await loadDashboard();
+        updateFetchStatus('数据已更新', `共 ${total} 条数据，${Object.keys(res.data || {}).length} 个平台`, true);
+    } catch (e) {
+        showToast('error', `获取失败: ${e.message}`);
+        document.getElementById('dashEmpty').style.display = '';
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        document.getElementById('dashLoadingSection').style.display = 'none';
+    }
+}
+
+async function loadDashboard() {
+    try {
+        const res = await api('/api/dashboard');
+        if (res.code !== 0 || !res.data.has_data) {
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('dashEmpty').style.display = '';
+            return;
+        }
+
+        state.dashboard = res.data;
+        document.getElementById('dashEmpty').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = '';
+        renderDashboard(res.data);
+    } catch (e) {
+        console.error('加载看板失败:', e);
+        document.getElementById('dashEmpty').style.display = '';
+    }
+}
+
+function renderDashboard(data) {
+    renderSourceStats(data.source_stats, data.total, data.date);
+    renderGenderChart(data.gender_stats);
+    renderCategoryChart(data.category_stats);
+    renderCrossPlatform(data.cross_platform);
+}
+
+function renderSourceStats(sourceStats, total, date) {
+    const grid = document.getElementById('sourceStatsGrid');
+    let html = `
+        <div class="dash-stat-card glass-card dash-stat-total">
+            <div class="dash-stat-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="dash-stat-value">${total}</div>
+            <div class="dash-stat-label">总数据量</div>
+            <div class="dash-stat-sub">${date}</div>
+        </div>`;
+
+    for (const [name, count] of Object.entries(sourceStats)) {
+        html += `
+        <div class="dash-stat-card glass-card">
+            <div class="dash-stat-icon dash-stat-icon-source">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <div class="dash-stat-value">${count}</div>
+            <div class="dash-stat-label">${escapeHtml(name)}</div>
+        </div>`;
+    }
+
+    grid.innerHTML = html;
+}
+
+function renderGenderChart(genderStats) {
+    const container = document.getElementById('genderChart');
+    const entries = Object.entries(genderStats).filter(([k]) => k !== '未知');
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+
+    if (total === 0) {
+        container.innerHTML = '<div class="chart-empty">暂无数据</div>';
+        return;
+    }
+
+    // 绘制饼图（用CSS实现）
+    let html = '<div class="pie-chart-wrap">';
+    html += '<div class="pie-chart">';
+
+    // 用 conic-gradient 实现饼图
+    let gradientParts = [];
+    let cumPercent = 0;
+    for (const [gender, count] of entries) {
+        const pct = (count / total) * 100;
+        const color = GENDER_COLORS[gender] || '#999';
+        gradientParts.push(`${color} ${cumPercent}% ${cumPercent + pct}%`);
+        cumPercent += pct;
+    }
+    html += `<div class="pie" style="background: conic-gradient(${gradientParts.join(', ')});"></div>`;
+    html += '</div>';
+
+    html += '<div class="pie-legend">';
+    for (const [gender, count] of entries) {
+        const pct = ((count / total) * 100).toFixed(1);
+        const color = GENDER_COLORS[gender] || '#999';
+        html += `<div class="legend-item">
+            <span class="legend-dot" style="background:${color}"></span>
+            <span class="legend-label">${escapeHtml(gender)}</span>
+            <span class="legend-value">${count} (${pct}%)</span>
+        </div>`;
+    }
+    html += '</div></div>';
+
+    container.innerHTML = html;
+}
+
+function renderCategoryChart(categoryStats) {
+    const container = document.getElementById('categoryChart');
+    const entries = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
+
+    if (entries.length === 0) {
+        container.innerHTML = '<div class="chart-empty">暂无数据</div>';
+        return;
+    }
+
+    const maxVal = entries[0][1];
+
+    let html = '<div class="bar-chart">';
+    entries.forEach(([cat, count], idx) => {
+        const pct = (count / maxVal * 100).toFixed(1);
+        const color = COLORS[idx % COLORS.length];
+        html += `<div class="bar-row">
+            <span class="bar-label">${escapeHtml(cat)}</span>
+            <div class="bar-track">
+                <div class="bar-fill" style="width:${pct}%;background:${color};animation-delay:${idx * 50}ms"></div>
+            </div>
+            <span class="bar-value">${count}</span>
+        </div>`;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function renderCrossPlatform(crossPlatform) {
+    const container = document.getElementById('crossPlatformTable');
+    document.getElementById('crossCount').textContent = crossPlatform.length;
+
+    if (crossPlatform.length === 0) {
+        container.innerHTML = '<div class="chart-empty">暂无跨平台热门作品</div>';
+        return;
+    }
+
+    let html = '<div class="cross-table">';
+    html += `<div class="cross-header">
+        <span class="cross-col cross-col-rank">#</span>
+        <span class="cross-col cross-col-title">书名</span>
+        <span class="cross-col cross-col-author">作者</span>
+        <span class="cross-col cross-col-cat">分类</span>
+        <span class="cross-col cross-col-sources">上榜平台</span>
+    </div>`;
+
+    crossPlatform.forEach((book, idx) => {
+        const sourceTags = book.sources.map(s =>
+            `<span class="tag tag-source">${escapeHtml(s)}</span>`
+        ).join('');
+
+        html += `<div class="cross-row stagger-in" style="animation-delay:${idx * 30}ms">
+            <span class="cross-col cross-col-rank">
+                <span class="cross-rank ${idx < 3 ? 'cross-rank-top' : ''}">${idx + 1}</span>
+            </span>
+            <span class="cross-col cross-col-title">${escapeHtml(book.title)}</span>
+            <span class="cross-col cross-col-author">${escapeHtml(book.author || '-')}</span>
+            <span class="cross-col cross-col-cat">${escapeHtml(book.category || '-')}</span>
+            <span class="cross-col cross-col-sources">${sourceTags}</span>
+        </div>`;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// ============================================================
+// 排行榜 Tab 功能
+// ============================================================
 async function doScrape(force = false) {
     if (state.loading) return;
     state.loading = true;
@@ -81,10 +322,10 @@ async function doScrape(force = false) {
     const btn = document.getElementById('btnScrape');
     btn.classList.add('loading');
     btn.disabled = true;
-    showSection('loading');
+    showRankSection('loading');
 
     const isAllSources = !state.source;
-    updateLoadingMsg(force ? '正在重新抓取最新数据...' : '正在加载数据...');
+    document.getElementById('loadingMsg').textContent = '正在加载数据...';
 
     const startTime = Date.now();
 
@@ -100,8 +341,6 @@ async function doScrape(force = false) {
             url = `/api/scrape/all-sources?${params.toString()}`;
         } else {
             params.set('source', state.source);
-            if (state.selectedCategories.length > 0)
-                params.set('category', state.selectedCategories.join(','));
             url = `/api/scrape?${params.toString()}`;
         }
 
@@ -111,22 +350,19 @@ async function doScrape(force = false) {
         state.date = res.date || '';
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        updateStats(state.results.length, elapsed);
+        updateStats(state.results.length, state.date || elapsed);
         renderResults(state.results);
-        showSection('results');
+        showRankSection('results');
 
         const msg = state.cached
             ? `已加载 ${state.results.length} 条缓存数据（${state.date}）`
-            : `成功抓取 ${state.results.length} 条新数据`;
+            : `成功加载 ${state.results.length} 条数据`;
         showToast(state.cached ? 'info' : 'success', msg);
 
         document.getElementById('btnFeishu').disabled = state.results.length === 0;
-
-        // 刷新数据源状态
-        loadSources();
     } catch (e) {
         showToast('error', `加载失败: ${e.message}`);
-        showSection('empty');
+        showRankSection('empty');
     } finally {
         state.loading = false;
         btn.classList.remove('loading');
@@ -169,17 +405,6 @@ function selectChip(el, type) {
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state[type] = el.dataset.value;
-    if (type === 'gender') renderCategoryChips();
-}
-
-function toggleCategory(el) {
-    const name = el.dataset.name;
-    el.classList.toggle('active');
-    if (el.classList.contains('active')) {
-        if (!state.selectedCategories.includes(name)) state.selectedCategories.push(name);
-    } else {
-        state.selectedCategories = state.selectedCategories.filter(c => c !== name);
-    }
 }
 
 function toggleTheme() {
@@ -215,23 +440,6 @@ function renderSourceChips() {
     }
 
     container.innerHTML = html;
-}
-
-function renderCategoryChips() {
-    const container = document.getElementById('categoryChips');
-    if (!state.source) {
-        container.innerHTML = '<span class="loading-text">汇总模式下自动抓取所有分类</span>';
-        return;
-    }
-    let cats = state.categories;
-    if (state.gender) cats = cats.filter(c => c.gender === state.gender);
-    const seen = new Set(); const unique = [];
-    for (const cat of cats) { if (!seen.has(cat.name)) { seen.add(cat.name); unique.push(cat); } }
-    if (unique.length === 0) { container.innerHTML = '<span class="loading-text">暂无分类</span>'; return; }
-    container.innerHTML = unique.map(cat => {
-        const isActive = state.selectedCategories.includes(cat.name);
-        return `<button class="cat-chip ${isActive ? 'active' : ''}" data-name="${escapeHtml(cat.name)}" onclick="toggleCategory(this)">${escapeHtml(cat.name)}</button>`;
-    }).join('');
 }
 
 function renderResults(data) {
@@ -313,21 +521,19 @@ function renderNovelCard(novel, delay) {
 // ============================================================
 // 辅助
 // ============================================================
-function showSection(name) {
+function showRankSection(name) {
     const sections = { loading: 'loadingSection', results: 'resultsSection', empty: 'emptyState' };
     document.getElementById('statsBar').style.display = name === 'results' ? '' : 'none';
     for (const [key, id] of Object.entries(sections))
         document.getElementById(id).style.display = key === name ? '' : 'none';
 }
 
-function updateStats(total, elapsed) {
+function updateStats(total, date) {
     document.getElementById('statTotal').textContent = total;
-    document.getElementById('statTime').textContent = `${elapsed}s`;
+    document.getElementById('statTime').textContent = date;
     const cats = new Set(state.results.map(r => r.category));
     document.getElementById('statCategories').textContent = cats.size;
 }
-
-function updateLoadingMsg(msg) { document.getElementById('loadingMsg').textContent = msg; }
 
 function showToast(type, message) {
     const container = document.getElementById('toastContainer');

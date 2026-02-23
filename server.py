@@ -3,6 +3,7 @@
 
 import sys
 import os
+from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -161,6 +162,133 @@ def api_scrape_all_sources():
         "total": len(all_data),
         "from_storage": any_stored,
         "date": day,
+    })
+
+
+@app.route("/api/fetch-all", methods=["POST"])
+def api_fetch_all():
+    """一键全量抓取所有数据源并按天存储"""
+    day = today_str()
+    force = request.args.get("force", "0") == "1"
+    results = {}
+    errors = []
+
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        # 如果不强制刷新且已有今日数据，跳过
+        if not force and has_data(source_key, day):
+            stored = load_data(source_key, day)
+            results[source_key] = {
+                "name": entry["name"],
+                "count": len(stored),
+                "from_storage": True,
+            }
+            continue
+
+        try:
+            data = _scrape_and_save(source_key)
+            results[source_key] = {
+                "name": entry["name"],
+                "count": len(data),
+                "from_storage": False,
+            }
+        except Exception as e:
+            errors.append(f"{entry['name']}: {str(e)}")
+            results[source_key] = {
+                "name": entry["name"],
+                "count": 0,
+                "error": str(e),
+            }
+
+    total = sum(r["count"] for r in results.values())
+
+    return jsonify({
+        "code": 0,
+        "data": results,
+        "total": total,
+        "date": day,
+        "errors": errors,
+    })
+
+
+@app.route("/api/dashboard")
+def api_dashboard():
+    """市场分析汇总看板数据"""
+    day = request.args.get("date") or today_str()
+
+    # 收集所有数据源的数据
+    all_novels = []
+    source_stats = {}
+
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        data = load_data(source_key, day) if has_data(source_key, day) else []
+        source_stats[entry["name"]] = len(data)
+        all_novels.extend(data)
+
+    if not all_novels:
+        return jsonify({
+            "code": 0,
+            "data": {
+                "date": day,
+                "total": 0,
+                "source_stats": source_stats,
+                "category_stats": {},
+                "gender_stats": {},
+                "period_stats": {},
+                "cross_platform": [],
+                "has_data": False,
+            },
+        })
+
+    # 分类统计
+    category_counter = Counter()
+    gender_counter = Counter()
+    period_counter = Counter()
+    title_sources = {}  # title -> set of sources
+
+    for novel in all_novels:
+        cat = novel.get("category", "未分类")
+        gender = novel.get("gender", "未知")
+        period = novel.get("period", "未知")
+        source = novel.get("source", "未知")
+        title = novel.get("title", "")
+
+        category_counter[cat] += 1
+        gender_counter[gender] += 1
+        period_counter[period] += 1
+
+        if title:
+            if title not in title_sources:
+                title_sources[title] = {"sources": set(), "data": novel}
+            title_sources[title]["sources"].add(source)
+
+    # 跨平台热门书籍（出现在 2 个及以上平台的）
+    cross_platform = []
+    for title, info in title_sources.items():
+        if len(info["sources"]) >= 2:
+            cross_platform.append({
+                "title": title,
+                "author": info["data"].get("author", ""),
+                "category": info["data"].get("category", ""),
+                "sources": sorted(list(info["sources"])),
+                "source_count": len(info["sources"]),
+            })
+    cross_platform.sort(key=lambda x: x["source_count"], reverse=True)
+
+    # 热度 top 分类 (前15)
+    top_categories = dict(category_counter.most_common(15))
+
+    return jsonify({
+        "code": 0,
+        "data": {
+            "date": day,
+            "total": len(all_novels),
+            "source_stats": source_stats,
+            "category_stats": top_categories,
+            "gender_stats": dict(gender_counter),
+            "period_stats": dict(period_counter),
+            "cross_platform": cross_platform[:20],
+            "has_data": True,
+        },
     })
 
 

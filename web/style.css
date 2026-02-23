@@ -933,6 +933,399 @@ body {
     animation: fadeIn 0.4s var(--ease-out) both;
 }
 
+/* --- Tab 导航 --- */
+.tab-nav {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.tab-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: transparent;
+    color: var(--md-on-surface-variant);
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+}
+
+.tab-btn:hover {
+    background: var(--md-surface-variant);
+}
+
+.tab-btn.active {
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+    box-shadow: 0 2px 12px rgba(103, 80, 164, 0.3);
+    font-weight: 600;
+}
+
+.tab-btn svg {
+    flex-shrink: 0;
+}
+
+/* --- 数据获取状态 --- */
+.fetch-status {
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.fetch-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.fetch-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s;
+}
+
+.fetch-info h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+}
+
+.fetch-desc {
+    font-size: 0.85rem;
+    color: var(--md-on-surface-variant);
+    margin-top: 2px;
+}
+
+.fetch-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+/* --- 看板统计卡片 --- */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.dash-stat-card {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-sm);
+    transition: transform 0.2s var(--ease-out);
+}
+
+.dash-stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.dash-stat-total {
+    border: 2px solid var(--md-primary-container);
+}
+
+.dash-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dash-stat-icon-source {
+    background: var(--md-tertiary-container);
+    color: var(--md-tertiary);
+}
+
+.dash-stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--md-primary);
+    line-height: 1.1;
+}
+
+.dash-stat-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--md-on-surface);
+}
+
+.dash-stat-sub {
+    font-size: 0.75rem;
+    color: var(--md-on-surface-variant);
+}
+
+/* --- 图表区域 --- */
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.chart-card {
+    padding: var(--space-lg);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+    color: var(--md-on-surface);
+}
+
+.chart-card-header svg {
+    color: var(--md-primary);
+    flex-shrink: 0;
+}
+
+.chart-card-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.chart-badge {
+    margin-left: auto;
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.chart-body {
+    min-height: 200px;
+}
+
+.chart-body-tall {
+    min-height: 360px;
+}
+
+.chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--md-on-surface-variant);
+    font-size: 0.9rem;
+}
+
+/* 饼图 */
+.pie-chart-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    justify-content: center;
+    padding: var(--space-md) 0;
+}
+
+.pie-chart {
+    flex-shrink: 0;
+}
+
+.pie {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.legend-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--md-on-surface);
+    min-width: 40px;
+}
+
+.legend-value {
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+}
+
+/* 柱状图 */
+.bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.bar-label {
+    font-size: 0.8rem;
+    color: var(--md-on-surface);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bar-track {
+    height: 22px;
+    background: var(--md-surface-variant);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    animation: barGrow 0.6s var(--ease-out) both;
+    min-width: 4px;
+}
+
+@keyframes barGrow {
+    from {
+        width: 0 !important;
+    }
+}
+
+.bar-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--md-primary);
+    text-align: right;
+}
+
+/* --- 跨平台热门 --- */
+.cross-platform-section {
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.cross-desc {
+    font-size: 0.85rem;
+    color: var(--md-on-surface-variant);
+    margin-bottom: var(--space-lg);
+}
+
+.cross-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.cross-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 100px 80px 200px;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--md-on-surface-variant);
+    border-bottom: 2px solid var(--md-outline-variant);
+}
+
+.cross-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 100px 80px 200px;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--md-outline-variant);
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.cross-row:hover {
+    background: var(--md-surface-variant);
+    border-radius: var(--radius-sm);
+}
+
+.cross-col {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cross-col-title {
+    font-weight: 500;
+    color: var(--md-on-surface);
+}
+
+.cross-col-author,
+.cross-col-cat {
+    font-size: 0.85rem;
+    color: var(--md-on-surface-variant);
+}
+
+.cross-col-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    white-space: normal;
+}
+
+.cross-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--md-surface-variant);
+    color: var(--md-on-surface-variant);
+}
+
+.cross-rank-top {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.3);
+}
+
 /* --- 响应式 --- */
 @media (max-width: 768px) {
     .app-container {
@@ -956,6 +1349,42 @@ body {
         flex-direction: row;
         align-items: center;
         justify-content: flex-start;
+    }
+
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fetch-status {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .fetch-actions {
+        justify-content: stretch;
+    }
+
+    .fetch-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .dashboard-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pie-chart-wrap {
+        flex-direction: column;
+    }
+
+    .cross-header,
+    .cross-row {
+        grid-template-columns: 30px 1fr 80px;
+    }
+
+    .cross-col-author,
+    .cross-col-cat {
+        display: none;
     }
 }
 

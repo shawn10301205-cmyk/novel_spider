@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 小说排行榜</title>
-    <meta name="description" content="小说排行榜聚合看板 - 多站数据源、一键抓取、排序、推送到飞书">
+    <title>📚 小说排行榜 · 市场分析看板</title>
+    <meta name="description" content="小说排行榜聚合看板 - 多站数据源、一键抓取、市场分析、编剧团队情报">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
@@ -35,7 +35,7 @@
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     <path d="M8 7h8M8 11h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
-                <h1 class="app-title">小说排行榜</h1>
+                <h1 class="app-title">小说市场看板</h1>
             </div>
             <div class="header-right">
                 <button class="icon-btn" id="btnTheme" title="切换主题" onclick="toggleTheme()">
@@ -47,250 +47,294 @@
             </div>
         </header>
 
-        <!-- 控制面板 -->
-        <section class="control-panel glass-card" id="controlPanel">
-            <div class="panel-header">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                    <path
-                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <!-- Tab 导航 -->
+        <nav class="tab-nav glass-card" id="tabNav">
+            <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3h7v9H3V3zM14 3h7v5h-7V3zM14 12h7v9h-7v-9zM3 16h7v5H3v-5z" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
-                <h2>抓取设置</h2>
-            </div>
+                市场看板
+            </button>
+            <button class="tab-btn" data-tab="rank" onclick="switchTab('rank')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 20V10M6 20V4M18 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                排行榜
+            </button>
+        </nav>
 
-            <div class="control-grid">
-                <!-- 数据源选择 -->
-                <div class="form-group form-group-full">
-                    <label class="form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <!-- ==================== 市场看板 Tab ==================== -->
+        <div class="tab-content" id="tabDashboard">
+            <!-- 数据获取状态 -->
+            <section class="fetch-status glass-card" id="fetchStatus">
+                <div class="fetch-info">
+                    <div class="fetch-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                             <path
                                 d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="fetchTitle">数据状态</h3>
+                        <p id="fetchDesc" class="fetch-desc">检查中...</p>
+                    </div>
+                </div>
+                <div class="fetch-actions">
+                    <button class="btn btn-primary" id="btnFetchAll" onclick="fetchAllData()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" />
+                            <path d="M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        全量获取数据
+                    </button>
+                    <button class="btn btn-outline" onclick="fetchAllData(true)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        数据源
-                    </label>
-                    <div class="chip-group" id="sourceChips">
-                        <div class="loading-text">加载数据源...</div>
-                    </div>
+                        强制刷新
+                    </button>
                 </div>
-                <!-- 频道选择 -->
-                <div class="form-group">
-                    <label class="form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                        频道
-                    </label>
-                    <div class="chip-group" id="genderChips">
-                        <button class="chip active" data-value="" onclick="selectChip(this, 'gender')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
+            </section>
+
+            <!-- 加载动画 -->
+            <section class="loading-section glass-card" id="dashLoadingSection" style="display:none">
+                <div class="loading-spinner">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="spin">
+                        <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" />
+                    </svg>
+                </div>
+                <p class="loading-message" id="dashLoadingMsg">正在全量抓取数据...</p>
+            </section>
+
+            <!-- 看板内容 -->
+            <div id="dashboardContent" style="display:none">
+                <!-- 平台统计卡片 -->
+                <section class="dashboard-stats" id="sourceStatsGrid"></section>
+
+                <!-- 图表区域 -->
+                <div class="chart-grid">
+                    <!-- 男女频占比 -->
+                    <section class="glass-card chart-card">
+                        <div class="chart-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>
-                            全部
-                        </button>
-                        <button class="chip" data-value="male" onclick="selectChip(this, 'gender')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <circle cx="10" cy="14" r="5" stroke="currentColor" stroke-width="2" />
-                                <path d="M19 5l-5.4 5.4M19 5h-5M19 5v5" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
+                            <h3>频道分布</h3>
+                        </div>
+                        <div class="chart-body" id="genderChart"></div>
+                    </section>
+
+                    <!-- 分类热度 -->
+                    <section class="glass-card chart-card">
+                        <div class="chart-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                                <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor"
+                                    stroke-width="2" />
                             </svg>
-                            男频
-                        </button>
-                        <button class="chip" data-value="female" onclick="selectChip(this, 'gender')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="2" />
-                                <path d="M12 13v8M9 18h6" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                            女频
-                        </button>
-                    </div>
+                            <h3>题材热度 Top 15</h3>
+                        </div>
+                        <div class="chart-body chart-body-tall" id="categoryChart"></div>
+                    </section>
                 </div>
 
-                <!-- 榜单类型 -->
-                <div class="form-group">
-                    <label class="form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 20V10M6 20V4M18 20v-6" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
+                <!-- 跨平台热门书籍 -->
+                <section class="glass-card cross-platform-section">
+                    <div class="chart-card-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        榜单
-                    </label>
-                    <div class="chip-group" id="periodChips">
-                        <button class="chip active" data-value="" onclick="selectChip(this, 'period')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                            全部
-                        </button>
-                        <button class="chip" data-value="read" onclick="selectChip(this, 'period')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <h3>🔥 跨平台热门作品</h3>
+                        <span class="chart-badge" id="crossCount">0</span>
+                    </div>
+                    <p class="cross-desc">以下书籍同时出现在多个平台排行榜，市场热度较高</p>
+                    <div id="crossPlatformTable"></div>
+                </section>
+            </div>
+
+            <!-- 无数据状态 -->
+            <section class="empty-state glass-card" id="dashEmpty" style="display:none">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                    <path d="M3 3h7v9H3V3zM14 3h7v5h-7V3zM14 12h7v9h-7v-9zM3 16h7v5H3v-5z" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <h3>暂无数据</h3>
+                <p>点击「全量获取数据」抓取所有平台排行榜</p>
+            </section>
+        </div>
+
+        <!-- ==================== 排行榜 Tab ==================== -->
+        <div class="tab-content" id="tabRank" style="display:none">
+            <!-- 控制面板 -->
+            <section class="control-panel glass-card" id="controlPanel">
+                <div class="panel-header">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h2>数据筛选</h2>
+                </div>
+
+                <div class="control-grid">
+                    <!-- 数据源选择 -->
+                    <div class="form-group form-group-full">
+                        <label class="form-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path
-                                    d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            阅读榜
-                        </button>
-                        <button class="chip" data-value="new" onclick="selectChip(this, 'period')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path
-                                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
+                            数据源
+                        </label>
+                        <div class="chip-group" id="sourceChips">
+                            <div class="loading-text">加载数据源...</div>
+                        </div>
+                    </div>
+                    <!-- 频道选择 -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>
-                            新书榜
-                        </button>
+                            频道
+                        </label>
+                        <div class="chip-group" id="genderChips">
+                            <button class="chip active" data-value="" onclick="selectChip(this, 'gender')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" />
+                                </svg>
+                                全部
+                            </button>
+                            <button class="chip" data-value="male" onclick="selectChip(this, 'gender')">男频</button>
+                            <button class="chip" data-value="female" onclick="selectChip(this, 'gender')">女频</button>
+                        </div>
+                    </div>
+
+                    <!-- 排序 -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M11 5h10M11 9h7M11 13h4" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                                <path d="M3 4l3 3 3-3M6 7v10" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            排序
+                        </label>
+                        <select class="form-select glass-input" id="sortSelect">
+                            <option value="rank">按排名</option>
+                            <option value="category">按分类</option>
+                            <option value="gender">按频道</option>
+                            <option value="period">按榜单</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- 分类选择 -->
-                <div class="form-group form-group-full">
-                    <label class="form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <!-- 操作按钮 -->
+                <div class="action-bar">
+                    <button class="btn btn-primary" id="btnScrape" onclick="doScrape()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" />
+                            <path d="M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        查看数据
+                    </button>
+                    <button class="btn btn-secondary" id="btnFeishu" onclick="pushFeishu()" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        推送飞书
+                    </button>
+                </div>
+            </section>
+
+            <!-- 统计信息 -->
+            <section class="stats-bar" id="statsBar" style="display:none">
+                <div class="stat-card glass-card">
+                    <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg></div>
+                    <div class="stat-info"><span class="stat-value" id="statTotal">0</span><span
+                            class="stat-label">总书籍</span></div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                             <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                             <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                        分类
-                    </label>
-                    <div class="category-wrap" id="categoryChips">
-                        <div class="loading-text">加载分类中...</div>
-                    </div>
+                        </svg></div>
+                    <div class="stat-info"><span class="stat-value" id="statCategories">0</span><span
+                            class="stat-label">分类数</span></div>
                 </div>
-
-                <!-- 排序 -->
-                <div class="form-group">
-                    <label class="form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M11 5h10M11 9h7M11 13h4" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" />
-                            <path d="M3 4l3 3 3-3M6 7v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                        排序
-                    </label>
-                    <select class="form-select glass-input" id="sortSelect">
-                        <option value="rank">按排名</option>
-                        <option value="category">按分类</option>
-                        <option value="gender">按频道</option>
-                        <option value="period">按榜单</option>
-                    </select>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg></div>
+                    <div class="stat-info"><span class="stat-value" id="statTime">-</span><span
+                            class="stat-label">数据日期</span></div>
                 </div>
-            </div>
+            </section>
 
-            <!-- 操作按钮 -->
-            <div class="action-bar">
-                <button class="btn btn-primary" id="btnScrape" onclick="doScrape()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2"
+            <!-- 加载动画 -->
+            <section class="loading-section glass-card" id="loadingSection" style="display:none">
+                <div class="loading-spinner">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="spin">
+                        <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5"
                             stroke-linecap="round" />
-                        <path d="M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
                     </svg>
-                    获取数据
-                </button>
-                <button class="btn btn-outline" onclick="doScrape(true)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    强制刷新
-                </button>
-                <button class="btn btn-secondary" id="btnFeishu" onclick="pushFeishu()" disabled>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    推送飞书
-                </button>
-            </div>
-        </section>
+                </div>
+                <p class="loading-message" id="loadingMsg">正在加载数据...</p>
+            </section>
 
-        <!-- 统计信息 -->
-        <section class="stats-bar" id="statsBar" style="display:none">
-            <div class="stat-card glass-card">
-                <div class="stat-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <div class="stat-info">
-                    <span class="stat-value" id="statTotal">0</span>
-                    <span class="stat-label">总书籍</span>
-                </div>
-            </div>
-            <div class="stat-card glass-card">
-                <div class="stat-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                </div>
-                <div class="stat-info">
-                    <span class="stat-value" id="statCategories">0</span>
-                    <span class="stat-label">分类数</span>
-                </div>
-            </div>
-            <div class="stat-card glass-card">
-                <div class="stat-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                    </svg>
-                </div>
-                <div class="stat-info">
-                    <span class="stat-value" id="statTime">-</span>
-                    <span class="stat-label">耗时</span>
-                </div>
-            </div>
-        </section>
+            <!-- 结果列表 -->
+            <section class="results-section" id="resultsSection" style="display:none">
+                <div id="resultsContainer"></div>
+            </section>
 
-        <!-- 加载动画 -->
-        <section class="loading-section glass-card" id="loadingSection" style="display:none">
-            <div class="loading-spinner">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="spin">
-                    <path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5"
-                        stroke-linecap="round" />
+            <!-- 空状态 -->
+            <section class="empty-state glass-card" id="emptyState">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                 </svg>
-            </div>
-            <p class="loading-message" id="loadingMsg">正在抓取排行榜数据...</p>
-        </section>
-
-        <!-- 结果列表 -->
-        <section class="results-section" id="resultsSection" style="display:none">
-            <div id="resultsContainer"></div>
-        </section>
-
-        <!-- 空状态 -->
-        <section class="empty-state glass-card" id="emptyState">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" class="empty-icon">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.5"
-                    stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor"
-                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-            <h3>选择筛选条件，开始抓取排行榜</h3>
-            <p>支持按频道、榜单类型、分类筛选和排序</p>
-        </section>
+                <h3>选择数据源，查看排行榜</h3>
+                <p>先在「市场看板」全量获取数据，然后在此按条件筛选查看</p>
+            </section>
+        </div>
     </div>
 
     <!-- Toast 提示 -->
