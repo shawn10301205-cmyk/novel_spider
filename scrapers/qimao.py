@@ -58,9 +58,15 @@ class QimaoScraper(BaseScraper):
     def _get_headers(self) -> dict:
         return {
             "User-Agent": self.user_agent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Referer": "https://www.qimao.com/",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Referer": "https://www.qimao.com/paihang",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin",
+            "Upgrade-Insecure-Requests": "1",
         }
 
     def get_categories(self) -> list[dict]:
@@ -79,7 +85,8 @@ class QimaoScraper(BaseScraper):
 
     def _fetch_rank_page(self, gender_key: str, rank_key: str) -> list[NovelRank]:
         """抓取单个榜单页面 (可能有多页，先抓第1页)"""
-        url = f"{self.BASE_URL}/paihang/{gender_key}/{rank_key}/date/"
+        # 先尝试不带 /date/ 的 URL, 失败再加
+        url = f"{self.BASE_URL}/paihang/{gender_key}/{rank_key}/"
         gender_name = self.GENDERS.get(gender_key, gender_key)
         rank_name = self.RANK_TYPES.get(rank_key, rank_key)
 
@@ -87,6 +94,10 @@ class QimaoScraper(BaseScraper):
 
         try:
             resp = requests.get(url, headers=self._get_headers(), timeout=15)
+            if resp.status_code == 405:
+                # 尝试带 /date/ 的备用 URL
+                url = f"{self.BASE_URL}/paihang/{gender_key}/{rank_key}/date/"
+                resp = requests.get(url, headers=self._get_headers(), timeout=15)
             resp.raise_for_status()
             resp.encoding = "utf-8"
         except requests.RequestException as e:
