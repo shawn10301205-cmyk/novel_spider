@@ -1,16 +1,19 @@
 /**
  * 小说排行榜前端 - Material 3 磨砂玻璃风格
+ * 支持多数据源切换和汇总模式
  */
 
 // ============================================================
 // 状态管理
 // ============================================================
 const state = {
+    source: '',        // 当前数据源（空=汇总模式）
     gender: '',
     period: '',
     sort: 'rank',
     selectedCategories: [],
     categories: [],
+    sources: [],
     results: [],
     loading: false,
 };
@@ -18,13 +21,15 @@ const state = {
 // ============================================================
 // 初始化
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    loadCategories();
+document.addEventListener('DOMContentLoaded', async () => {
     // 恢复主题
     const saved = localStorage.getItem('theme');
     if (saved === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
     }
+    // 加载数据源 -> 再加载分类
+    await loadSources();
+    loadCategories();
 });
 
 // ============================================================
@@ -38,15 +43,28 @@ async function api(path, options = {}) {
     return resp.json();
 }
 
+async function loadSources() {
+    try {
+        const res = await api('/api/sources');
+        state.sources = res.data || [];
+        renderSourceChips();
+    } catch (e) {
+        console.error('加载数据源失败:', e);
+        document.getElementById('sourceChips').innerHTML =
+            '<span class="loading-text">数据源加载失败</span>';
+    }
+}
+
 async function loadCategories() {
     try {
-        const res = await api('/api/categories');
+        const params = state.source ? `?source=${state.source}` : '';
+        const res = await api(`/api/categories${params}`);
         state.categories = res.data || [];
         renderCategoryChips();
     } catch (e) {
         console.error('加载分类失败:', e);
         document.getElementById('categoryChips').innerHTML =
-            '<span class="loading-text">分类加载失败，请刷新重试</span>';
+            '<span class="loading-text">分类加载失败</span>';
     }
 }
 
@@ -58,20 +76,37 @@ async function doScrape() {
     btn.classList.add('loading');
     btn.disabled = true;
     showSection('loading');
-    updateLoadingMsg('正在抓取排行榜数据...');
 
-    const params = new URLSearchParams();
-    if (state.gender) params.set('gender', state.gender);
-    if (state.period) params.set('period', state.period);
-    if (state.sort) params.set('sort', state.sort);
-    if (state.selectedCategories.length > 0) {
-        params.set('category', state.selectedCategories.join(','));
-    }
+    const isAllSources = !state.source;
+    updateLoadingMsg(isAllSources
+        ? '正在汇总所有数据源的排行榜...'
+        : `正在抓取 ${getSourceName(state.source)} 排行榜...`);
 
     const startTime = Date.now();
 
     try {
-        const res = await api(`/api/scrape?${params.toString()}`);
+        let url;
+        if (isAllSources) {
+            // 汇总模式
+            const params = new URLSearchParams();
+            if (state.gender) params.set('gender', state.gender);
+            if (state.period) params.set('period', state.period);
+            if (state.sort) params.set('sort', state.sort);
+            url = `/api/scrape/all-sources?${params.toString()}`;
+        } else {
+            // 单站模式
+            const params = new URLSearchParams();
+            params.set('source', state.source);
+            if (state.gender) params.set('gender', state.gender);
+            if (state.period) params.set('period', state.period);
+            if (state.sort) params.set('sort', state.sort);
+            if (state.selectedCategories.length > 0) {
+                params.set('category', state.selectedCategories.join(','));
+            }
+            url = `/api/scrape?${params.toString()}`;
+        }
+
+        const res = await api(url);
         state.results = res.data || [];
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -79,8 +114,6 @@ async function doScrape() {
         renderResults(state.results);
         showSection('results');
         showToast('success', `成功抓取 ${state.results.length} 条数据`);
-
-        // 启用飞书按钮
         document.getElementById('btnFeishu').disabled = state.results.length === 0;
     } catch (e) {
         console.error('抓取失败:', e);
@@ -94,27 +127,17 @@ async function doScrape() {
 }
 
 async function pushFeishu() {
-    if (state.results.length === 0) {
-        showToast('error', '没有可推送的数据');
-        return;
-    }
-
+    if (state.results.length === 0) return showToast('error', '没有数据');
     const btn = document.getElementById('btnFeishu');
     btn.classList.add('loading');
     btn.disabled = true;
-
     try {
         const res = await api('/api/feishu/push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data: state.results, clear: true }),
         });
-
-        if (res.code === 0) {
-            showToast('success', '已成功推送到飞书多维表格');
-        } else {
-            showToast('error', res.msg || '推送失败');
-        }
+        showToast(res.code === 0 ? 'success' : 'error', res.msg || '操作完成');
     } catch (e) {
         showToast('error', `推送失败: ${e.message}`);
     } finally {
@@ -126,27 +149,28 @@ async function pushFeishu() {
 // ============================================================
 // UI 交互
 // ============================================================
+function selectSource(el) {
+    const group = el.parentElement;
+    group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    state.source = el.dataset.value;
+    state.selectedCategories = [];
+    loadCategories();
+}
+
 function selectChip(el, type) {
-    // 同组内单选
     const group = el.parentElement;
     group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state[type] = el.dataset.value;
-
-    // 频道变化时更新分类显示
-    if (type === 'gender') {
-        renderCategoryChips();
-    }
+    if (type === 'gender') renderCategoryChips();
 }
 
 function toggleCategory(el) {
     const name = el.dataset.name;
     el.classList.toggle('active');
-
     if (el.classList.contains('active')) {
-        if (!state.selectedCategories.includes(name)) {
-            state.selectedCategories.push(name);
-        }
+        if (!state.selectedCategories.includes(name)) state.selectedCategories.push(name);
     } else {
         state.selectedCategories = state.selectedCategories.filter(c => c !== name);
     }
@@ -159,26 +183,49 @@ function toggleTheme() {
     localStorage.setItem('theme', isDark ? '' : 'dark');
 }
 
+function getSourceName(id) {
+    const s = state.sources.find(s => s.id === id);
+    return s ? s.name : id;
+}
+
 // ============================================================
 // 渲染
 // ============================================================
-function renderCategoryChips() {
-    const container = document.getElementById('categoryChips');
-    let cats = state.categories;
+function renderSourceChips() {
+    const container = document.getElementById('sourceChips');
+    // "汇总" chip + 各数据源
+    let html = `
+        <button class="chip active" data-value="" onclick="selectSource(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            全部汇总
+        </button>`;
 
-    // 按频道筛选
-    if (state.gender) {
-        cats = cats.filter(c => c.gender === state.gender);
+    for (const src of state.sources) {
+        html += `
+            <button class="chip" data-value="${src.id}" onclick="selectSource(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/></svg>
+                ${escapeHtml(src.name)}
+            </button>`;
     }
 
-    // 去重
+    container.innerHTML = html;
+}
+
+function renderCategoryChips() {
+    const container = document.getElementById('categoryChips');
+
+    if (!state.source) {
+        container.innerHTML = '<span class="loading-text">汇总模式下自动抓取所有分类</span>';
+        return;
+    }
+
+    let cats = state.categories;
+    if (state.gender) cats = cats.filter(c => c.gender === state.gender);
+
     const seen = new Set();
     const unique = [];
     for (const cat of cats) {
-        if (!seen.has(cat.name)) {
-            seen.add(cat.name);
-            unique.push(cat);
-        }
+        if (!seen.has(cat.name)) { seen.add(cat.name); unique.push(cat); }
     }
 
     if (unique.length === 0) {
@@ -188,50 +235,64 @@ function renderCategoryChips() {
 
     container.innerHTML = unique.map(cat => {
         const isActive = state.selectedCategories.includes(cat.name);
-        return `<button class="cat-chip ${isActive ? 'active' : ''}" 
-                    data-name="${cat.name}" 
-                    onclick="toggleCategory(this)">${cat.name}</button>`;
+        return `<button class="cat-chip ${isActive ? 'active' : ''}"
+                    data-name="${escapeHtml(cat.name)}"
+                    onclick="toggleCategory(this)">${escapeHtml(cat.name)}</button>`;
     }).join('');
 }
 
 function renderResults(data) {
     const container = document.getElementById('resultsContainer');
+    if (!data || data.length === 0) { container.innerHTML = ''; return; }
 
-    if (!data || data.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    // 按分类分组
-    const groups = {};
+    // 按来源 -> 分类分组
+    const bySource = {};
     for (const item of data) {
-        const key = item.category || '未分类';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
+        const src = item.source || '未知来源';
+        if (!bySource[src]) bySource[src] = {};
+        const cat = item.category || '未分类';
+        if (!bySource[src][cat]) bySource[src][cat] = [];
+        bySource[src][cat].push(item);
     }
 
     let html = '';
     let delay = 0;
 
-    for (const [category, novels] of Object.entries(groups)) {
-        html += `
-        <div class="category-group fade-in" style="animation-delay: ${delay}ms">
-            <div class="category-group-header">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    for (const [source, categories] of Object.entries(bySource)) {
+        // 来源标题（汇总模式下显示）
+        const sourceCount = Object.values(categories).reduce((s, arr) => s + arr.length, 0);
+        if (Object.keys(bySource).length > 1) {
+            html += `
+            <div class="source-header fade-in" style="animation-delay: ${delay}ms">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                <h3>${escapeHtml(category)}</h3>
-                <span class="badge">${novels.length}本</span>
-            </div>
-            <div class="novel-list">`;
-
-        for (const novel of novels) {
-            delay += 30;
-            html += renderNovelCard(novel, delay);
+                <h2>${escapeHtml(source)}</h2>
+                <span class="badge">${sourceCount}本</span>
+            </div>`;
+            delay += 50;
         }
 
-        html += `</div></div>`;
-        delay += 50;
+        for (const [category, novels] of Object.entries(categories)) {
+            html += `
+            <div class="category-group fade-in" style="animation-delay: ${delay}ms">
+                <div class="category-group-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <h3>${escapeHtml(category)}</h3>
+                    <span class="badge">${novels.length}本</span>
+                </div>
+                <div class="novel-list">`;
+
+            for (const novel of novels) {
+                delay += 20;
+                html += renderNovelCard(novel, delay);
+            }
+
+            html += `</div></div>`;
+            delay += 30;
+        }
     }
 
     container.innerHTML = html;
@@ -274,15 +335,8 @@ function renderNovelCard(novel, delay) {
 // 辅助
 // ============================================================
 function showSection(name) {
-    const sections = {
-        loading: 'loadingSection',
-        results: 'resultsSection',
-        empty: 'emptyState',
-    };
-
-    // 显示统计条
+    const sections = { loading: 'loadingSection', results: 'resultsSection', empty: 'emptyState' };
     document.getElementById('statsBar').style.display = name === 'results' ? '' : 'none';
-
     for (const [key, id] of Object.entries(sections)) {
         document.getElementById(id).style.display = key === name ? '' : 'none';
     }
@@ -291,8 +345,6 @@ function showSection(name) {
 function updateStats(total, elapsed) {
     document.getElementById('statTotal').textContent = total;
     document.getElementById('statTime').textContent = `${elapsed}s`;
-
-    // 计算分类数
     const cats = new Set(state.results.map(r => r.category));
     document.getElementById('statCategories').textContent = cats.size;
 }
@@ -303,23 +355,16 @@ function updateLoadingMsg(msg) {
 
 function showToast(type, message) {
     const container = document.getElementById('toastContainer');
-
     const icons = {
         success: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         error: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
         info: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     };
-
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `${icons[type] || icons.info} <span>${escapeHtml(message)}</span>`;
     container.appendChild(toast);
-
-    // 自动移除
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
 function escapeHtml(str) {

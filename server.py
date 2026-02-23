@@ -10,8 +10,8 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import yaml
 
-from scrapers.fanqie import FanqieScraper
-from sorter import apply_sort, filter_by_gender, filter_by_category, filter_by_period
+from scrapers import SCRAPER_REGISTRY
+from sorter import apply_sort
 from exporters.feishu import FeishuExporter
 
 app = Flask(__name__, static_folder="web", static_url_path="")
@@ -28,9 +28,10 @@ def load_config() -> dict:
 
 def get_scraper(source: str = "fanqie"):
     config = load_config()
-    scrapers = {"fanqie": FanqieScraper}
-    cls = scrapers.get(source, FanqieScraper)
-    return cls(config.get("scrape", {}))
+    entry = SCRAPER_REGISTRY.get(source)
+    if not entry:
+        return None
+    return entry["class"](config.get("scrape", {}))
 
 
 @app.route("/")
@@ -38,11 +39,22 @@ def index():
     return send_from_directory("web", "index.html")
 
 
+@app.route("/api/sources")
+def api_sources():
+    """获取所有可用数据源"""
+    sources = []
+    for key, entry in SCRAPER_REGISTRY.items():
+        sources.append({"id": key, "name": entry["name"]})
+    return jsonify({"code": 0, "data": sources})
+
+
 @app.route("/api/categories")
 def api_categories():
     """获取分类列表"""
     source = request.args.get("source", "fanqie")
     scraper = get_scraper(source)
+    if not scraper:
+        return jsonify({"code": 1, "msg": f"不支持的数据源: {source}"})
     categories = scraper.get_categories()
     return jsonify({"code": 0, "data": categories})
 
@@ -51,12 +63,14 @@ def api_categories():
 def api_scrape():
     """抓取排行榜"""
     source = request.args.get("source", "fanqie")
-    gender = request.args.get("gender")  # male / female / None
-    period = request.args.get("period")  # read / new / None
-    category = request.args.get("category")  # 分类名，逗号分隔
+    gender = request.args.get("gender") or None
+    period = request.args.get("period") or None
+    category = request.args.get("category") or None
     sort_key = request.args.get("sort", "rank")
 
     scraper = get_scraper(source)
+    if not scraper:
+        return jsonify({"code": 1, "msg": f"不支持的数据源: {source}"})
 
     if category:
         category_names = [c.strip() for c in category.split(",")]
@@ -73,20 +87,28 @@ def api_scrape():
     return jsonify({"code": 0, "data": data, "total": len(data)})
 
 
-@app.route("/api/scrape/single")
-def api_scrape_single():
-    """抓取单个分类的排行榜"""
-    source = request.args.get("source", "fanqie")
-    gender = request.args.get("gender", "male")
-    period = request.args.get("period", "read")
-    category_id = request.args.get("category_id", "")
+@app.route("/api/scrape/all-sources")
+def api_scrape_all_sources():
+    """抓取所有数据源（汇总模式）"""
+    gender = request.args.get("gender") or None
+    period = request.args.get("period") or None
+    sort_key = request.args.get("sort", "rank")
 
-    if not category_id:
-        return jsonify({"code": 1, "msg": "缺少 category_id 参数"})
+    config = load_config()
+    all_novels = []
 
-    scraper = get_scraper(source)
-    novels = scraper.scrape_rank(category_id, gender, period)
-    data = [n.to_dict() for n in novels]
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        try:
+            scraper = entry["class"](config.get("scrape", {}))
+            novels = scraper.scrape_all(gender=gender, period=period)
+            all_novels.extend(novels)
+        except Exception as e:
+            print(f"⚠ {entry['name']} 抓取失败: {e}")
+
+    if sort_key:
+        all_novels = apply_sort(all_novels, sort_key)
+
+    data = [n.to_dict() for n in all_novels]
     return jsonify({"code": 0, "data": data, "total": len(data)})
 
 

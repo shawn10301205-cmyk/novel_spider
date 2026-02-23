@@ -83,7 +83,9 @@
 }
 
 /* --- Reset & Base --- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -170,10 +172,23 @@ body {
 }
 
 @keyframes float {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(30px, -30px) scale(1.05); }
-    50% { transform: translate(-20px, 20px) scale(0.95); }
-    75% { transform: translate(20px, 10px) scale(1.02); }
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(30px, -30px) scale(1.05);
+    }
+
+    50% {
+        transform: translate(-20px, 20px) scale(0.95);
+    }
+
+    75% {
+        transform: translate(20px, 10px) scale(1.02);
+    }
 }
 
 /* --- 磨砂玻璃效果 --- */
@@ -555,8 +570,13 @@ body {
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .spin {
@@ -603,6 +623,39 @@ body {
     font-weight: 600;
 }
 
+/* 汇总模式下的来源标题 */
+.source-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+    margin-top: var(--space-md);
+    border-bottom: 3px solid var(--md-primary);
+}
+
+.source-header svg {
+    color: var(--md-primary);
+}
+
+.source-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-tertiary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.source-header .badge {
+    margin-left: auto;
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
 /* 书籍卡片 */
 .novel-card {
     padding: var(--space-md) var(--space-lg);
@@ -632,10 +685,28 @@ body {
     flex-shrink: 0;
 }
 
-.rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #fff; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3); }
-.rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); color: #fff; box-shadow: 0 4px 12px rgba(160, 160, 160, 0.3); }
-.rank-3 { background: linear-gradient(135deg, #CD7F32, #B87333); color: #fff; box-shadow: 0 4px 12px rgba(205, 127, 50, 0.3); }
-.rank-other { background: var(--md-surface-variant); color: var(--md-on-surface-variant); }
+.rank-1 {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+}
+
+.rank-2 {
+    background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(160, 160, 160, 0.3);
+}
+
+.rank-3 {
+    background: linear-gradient(135deg, #CD7F32, #B87333);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(205, 127, 50, 0.3);
+}
+
+.rank-other {
+    background: var(--md-surface-variant);
+    color: var(--md-on-surface-variant);
+}
 
 .novel-info {
     min-width: 0;
@@ -801,13 +872,28 @@ body {
     transform: translateX(100px);
 }
 
-.toast-success svg { color: #22C55E; }
-.toast-error svg { color: var(--md-error); }
-.toast-info svg { color: var(--md-primary); }
+.toast-success svg {
+    color: #22C55E;
+}
+
+.toast-error svg {
+    color: var(--md-error);
+}
+
+.toast-info svg {
+    color: var(--md-primary);
+}
 
 @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(100px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* --- 动画 --- */
@@ -816,8 +902,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .stagger-in {
