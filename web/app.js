@@ -446,7 +446,6 @@ async function openCategoryDetail(category) {
             if (extra.word_count) extraParts.push(`📝 ${escapeHtml(extra.word_count)}`);
             if (extra.status) extraParts.push(escapeHtml(extra.status));
             const extraLine = extraParts.length ? `<div class="novel-extra">${extraParts.join(' · ')}</div>` : '';
-            const introLine = extra.intro ? `<div class="novel-intro">${escapeHtml(extra.intro.substring(0, 100))}${extra.intro.length > 100 ? '...' : ''}</div>` : '';
 
             html += `<div class="modal-book-card glass-card">
                 <div class="modal-book-rank">${book.rank || '-'}</div>
@@ -454,14 +453,11 @@ async function openCategoryDetail(category) {
                     <div class="modal-book-title">${bookLink}</div>
                     <div class="modal-book-meta">
                         <span>✍ ${escapeHtml(book.author || '未知作者')}</span>
-                        <span>📖 ${escapeHtml(book.latest_chapter || '-')}</span>
                     </div>
                     ${extraLine}
-                    ${introLine}
                 </div>
                 <div class="modal-book-tags">
                     <span class="tag ${genderClass}">${escapeHtml(book.gender || '-')}</span>
-                    <span class="tag tag-period">${escapeHtml(book.period || '-')}</span>
                     <span class="tag tag-source">${escapeHtml(book.source || '-')}</span>
                 </div>
             </div>`;
@@ -732,9 +728,6 @@ function renderNovelCard(novel, delay) {
         if (extra.status) parts.push(escapeHtml(extra.status));
         extraHtml = `<div class="novel-extra">${parts.join(' · ')}</div>`;
     }
-    const introHtml = extra.intro
-        ? `<div class="novel-intro">${escapeHtml(extra.intro.substring(0, 80))}${extra.intro.length > 80 ? '...' : ''}</div>`
-        : '';
 
     return `
     <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms">
@@ -752,12 +745,9 @@ function renderNovelCard(novel, delay) {
                 </span>
             </div>
             ${extraHtml}
-            ${novel.latest_chapter ? `<div class="novel-chapter">📖 ${escapeHtml(novel.latest_chapter)}</div>` : ''}
-            ${introHtml}
         </div>
         <div class="novel-tags">
             <span class="tag ${genderClass}">${escapeHtml(novel.gender || '-')}</span>
-            <span class="tag tag-period">${escapeHtml(novel.period || '-')}</span>
             ${novel.source ? `<span class="tag tag-source">${escapeHtml(novel.source)}</span>` : ''}
         </div>
     </div>`;
