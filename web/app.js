@@ -217,13 +217,16 @@ function renderHeatCol(containerId, books) {
         html += `<div class="heat-rank-item ${rankClass}" style="animation-delay:${idx * 30}ms">
             <span class="heat-rank-num">${idx + 1}</span>
             <div class="heat-rank-info">
-                <div class="heat-rank-title">${b.category ? `<span class="heat-rank-tag">${escapeHtml(b.category)}</span>` : ''}${titleLink}</div>
+                <div class="heat-rank-title">${titleLink}</div>
                 <div class="heat-rank-meta">
                     <span>${escapeHtml(b.author || '-')}</span>
                 </div>
                 ${metaParts.length ? `<div class="heat-rank-heat">${metaParts.join(' · ')}</div>` : ''}
             </div>
-            <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
+            <div class="heat-rank-tags">
+                ${b.category ? `<span class="heat-rank-tag">${escapeHtml(b.category)}</span>` : ''}
+                <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
+            </div>
         </div>`;
     });
     el.innerHTML = html;

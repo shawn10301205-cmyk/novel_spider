@@ -1381,6 +1381,14 @@ body {
     margin-top: 2px;
 }
 
+.heat-rank-tags {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
 .heat-rank-source {
     flex-shrink: 0;
     font-size: 0.65rem;
