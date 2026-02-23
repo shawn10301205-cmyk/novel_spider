@@ -1756,6 +1756,40 @@ body {
     justify-content: flex-end;
 }
 
+/* --- 分页 --- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pagination-info {
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+}
+
+.pagination-btns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.pagination-btns .btn-sm {
+    min-width: 34px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+.pagination-dot {
+    padding: 0 4px;
+    color: var(--md-on-surface-variant);
+    font-size: 0.8rem;
+}
+
 /* --- 设置弹窗 --- */
 .settings-section {
     margin-bottom: var(--space-lg);

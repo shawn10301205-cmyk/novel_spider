@@ -869,14 +869,38 @@ function renderResults(data) {
     const container = document.getElementById('resultsContainer');
     if (!data || data.length === 0) { container.innerHTML = ''; return; }
 
-    // 按热度排序时，直接按热度值降序排列
+    // 按热度排序时，分页显示
     if (state.sort === 'heat') {
-        const sorted = [...data].sort((a, b) => parseHeatValue(b) - parseHeatValue(a));
-        let html = '<div class="category-group fade-in"><div class="category-group-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>按热度排序</h3><span class="badge">' + sorted.length + '本</span></div><div class="novel-list">';
-        let delay = 0;
-        sorted.forEach((novel, idx) => { delay += 20; html += renderNovelCard(novel, delay, idx + 1); });
-        html += '</div></div>';
+        if (!state._heatSorted || state._heatSortedSource !== data) {
+            state._heatSorted = [...data].sort((a, b) => parseHeatValue(b) - parseHeatValue(a));
+            state._heatSortedSource = data;
+            state.page = 1;
+        }
+        const sorted = state._heatSorted;
+        const pageSize = 50;
+        const totalPages = Math.ceil(sorted.length / pageSize);
+        const page = Math.min(state.page || 1, totalPages);
+        const start = (page - 1) * pageSize;
+        const pageData = sorted.slice(start, start + pageSize);
+
+        let html = '<div class="category-group fade-in"><div class="category-group-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>按热度排序</h3><span class="badge">' + sorted.length + '本</span></div>';
+
+        // 顶部分页
+        html += renderPagination(page, totalPages, sorted.length, pageSize);
+
+        html += '<div class="novel-list">';
+        pageData.forEach((novel, idx) => {
+            html += renderNovelCard(novel, idx * 15, start + idx + 1);
+        });
+        html += '</div>';
+
+        // 底部分页
+        html += renderPagination(page, totalPages, sorted.length, pageSize);
+
+        html += '</div>';
         container.innerHTML = html;
+        // 滚动到顶部
+        if (state.page > 1) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
     }
 
@@ -918,6 +942,57 @@ function renderResults(data) {
         }
     }
     container.innerHTML = html;
+}
+
+// 渲染分页条
+function renderPagination(page, totalPages, total, pageSize) {
+    if (totalPages <= 1) return '';
+
+    const start = (page - 1) * pageSize + 1;
+    const end = Math.min(page * pageSize, total);
+
+    let html = '<div class="pagination">';
+    html += `<span class="pagination-info">第 ${start}-${end} 条，共 ${total} 条</span>`;
+    html += '<div class="pagination-btns">';
+
+    // 上一页
+    html += `<button class="btn btn-outline btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="goPage(${page - 1})">← 上一页</button>`;
+
+    // 页码
+    const range = getPageRange(page, totalPages);
+    for (const p of range) {
+        if (p === '...') {
+            html += '<span class="pagination-dot">…</span>';
+        } else {
+            html += `<button class="btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline'}" onclick="goPage(${p})">${p}</button>`;
+        }
+    }
+
+    // 下一页
+    html += `<button class="btn btn-outline btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="goPage(${page + 1})">下一页 →</button>`;
+
+    html += '</div></div>';
+    return html;
+}
+
+// 计算显示哪些页码（1 ... 4 5 6 ... 20）
+function getPageRange(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+        pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+}
+
+// 翻页
+function goPage(p) {
+    state.page = p;
+    renderResults(state.results);
 }
 
 // 解析热度值为数字，用于排序
