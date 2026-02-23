@@ -182,7 +182,7 @@ function renderDashboard(data) {
 function renderSourceStats(sourceStats, total, date) {
     const grid = document.getElementById('sourceStatsGrid');
     let html = `
-        <div class="dash-stat-card glass-card dash-stat-total">
+        <div class="dash-stat-card glass-card dash-stat-total" onclick="goToAllRank()" title="点击查看全部排行">
             <div class="dash-stat-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
@@ -192,17 +192,47 @@ function renderSourceStats(sourceStats, total, date) {
         </div>`;
 
     for (const [name, count] of Object.entries(sourceStats)) {
+        // 根据 name 反查 source id
+        const srcId = getSourceIdByName(name);
         html += `
-        <div class="dash-stat-card glass-card">
+        <div class="dash-stat-card glass-card dash-stat-clickable" onclick="goToSourceRank('${srcId}')" title="点击查看 ${escapeHtml(name)} 排行榜">
             <div class="dash-stat-icon dash-stat-icon-source">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/></svg>
             </div>
             <div class="dash-stat-value">${count}</div>
             <div class="dash-stat-label">${escapeHtml(name)}</div>
+            <div class="dash-stat-sub">点击查看排行 →</div>
         </div>`;
     }
 
     grid.innerHTML = html;
+}
+
+function getSourceIdByName(name) {
+    const src = state.sources.find(s => s.name === name);
+    return src ? src.id : '';
+}
+
+// 跳转到排行榜 Tab 并加载指定数据源
+function goToSourceRank(sourceId) {
+    switchTab('rank');
+    // 选中对应的数据源 chip
+    state.source = sourceId;
+    const chips = document.querySelectorAll('#sourceChips .chip');
+    chips.forEach(c => {
+        c.classList.toggle('active', c.dataset.value === sourceId);
+    });
+    doScrape();
+}
+
+function goToAllRank() {
+    switchTab('rank');
+    state.source = '';
+    const chips = document.querySelectorAll('#sourceChips .chip');
+    chips.forEach(c => {
+        c.classList.toggle('active', c.dataset.value === '');
+    });
+    doScrape();
 }
 
 function renderGenderChart(genderStats) {

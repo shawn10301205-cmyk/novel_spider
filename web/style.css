@@ -1082,6 +1082,22 @@ body {
     color: var(--md-on-surface-variant);
 }
 
+.dash-stat-clickable,
+.dash-stat-total {
+    cursor: pointer;
+}
+
+.dash-stat-clickable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(103, 80, 164, 0.15);
+    border-color: var(--md-primary-container);
+}
+
+.dash-stat-total:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(103, 80, 164, 0.2);
+}
+
 /* --- 图表区域 --- */
 .chart-grid {
     display: grid;
