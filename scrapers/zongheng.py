@@ -97,14 +97,11 @@ class ZonghengScraper(BaseScraper):
 
     def _parse_page(self, html: str, rank_name: str) -> list[NovelRank]:
         """解析纵横排行榜页面"""
+        import re
         soup = BeautifulSoup(html, "lxml")
         novels = []
 
-        # 纵横排行榜: 第一项通常是特殊展示的榜首
-        # 然后是列表项
         rank_idx = 0
-
-        # 方法1: 尝试解析排行列表 - 查找书籍链接
         book_links = soup.select('a[href*="/detail/"]')
 
         seen_titles = set()
@@ -117,7 +114,6 @@ class ZonghengScraper(BaseScraper):
             if "/detail/" not in href:
                 continue
 
-            # 跳过重复
             if title in seen_titles:
                 continue
             seen_titles.add(title)
@@ -125,20 +121,41 @@ class ZonghengScraper(BaseScraper):
             rank_idx += 1
             book_url = href if href.startswith("http") else f"{self.BASE_URL}{href}"
 
-            # 尝试从父元素或兄弟元素获取作者
+            # 从父级 zh-modules-rank-book 获取详细数据
             author = ""
-            parent = link.parent
-            if parent:
-                author_link = parent.select_one('a[href*="/show/userInfo/"]')
+            extra = {}
+            book_module = link.find_parent(class_="zh-modules-rank-book")
+            if book_module:
+                # 作者
+                author_link = book_module.select_one('a[href*="/show/userInfo/"]')
                 if author_link:
                     author = author_link.get_text(strip=True)
-                if not author:
-                    # 向上查找
-                    grandparent = parent.parent
-                    if grandparent:
-                        author_link = grandparent.select_one('a[href*="/show/userInfo/"]')
-                        if author_link:
-                            author = author_link.get_text(strip=True)
+
+                # 右侧数据栏: "作者|15938|月票" 或 "作者|387.9|万字"
+                right_slot = book_module.select_one('.rank-content-default__right-slot')
+                if right_slot:
+                    slot_text = right_slot.get_text(strip=True)
+                    # 提取数值 + 单位
+                    m = re.search(r'([\d.]+)\s*(万字|月票|人气|点击|推荐票)', slot_text)
+                    if m:
+                        val, unit = m.group(1), m.group(2)
+                        if unit == '万字':
+                            extra['word_count'] = f"{val}万字"
+                        else:
+                            extra['heat'] = f"{val}{unit}"
+
+            if not author:
+                parent = link.parent
+                if parent:
+                    author_link = parent.select_one('a[href*="/show/userInfo/"]')
+                    if author_link:
+                        author = author_link.get_text(strip=True)
+                    if not author:
+                        grandparent = parent.parent
+                        if grandparent:
+                            author_link = grandparent.select_one('a[href*="/show/userInfo/"]')
+                            if author_link:
+                                author = author_link.get_text(strip=True)
 
             novels.append(NovelRank(
                 rank=rank_idx,
@@ -149,6 +166,7 @@ class ZonghengScraper(BaseScraper):
                 period=rank_name,
                 book_url=book_url,
                 source=self.SOURCE_NAME,
+                extra=extra,
             ))
 
         return novels
