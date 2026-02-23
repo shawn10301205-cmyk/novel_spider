@@ -1271,6 +1271,126 @@ body {
     text-align: right;
 }
 
+/* --- 在读/热度排行 --- */
+.heat-rank-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.heat-rank-col {
+    padding: var(--space-lg);
+}
+
+.heat-rank-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.heat-rank-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background 0.2s;
+    animation: fadeIn 0.3s ease both;
+}
+
+.heat-rank-item:hover {
+    background: var(--md-surface-variant);
+}
+
+.heat-rank-num {
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--md-on-surface-variant);
+    background: var(--md-surface);
+    flex-shrink: 0;
+}
+
+.heat-rank-top .heat-rank-num {
+    color: #fff;
+}
+
+.heat-rank-1 .heat-rank-num {
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+}
+
+.heat-rank-2 .heat-rank-num {
+    background: linear-gradient(135deg, #e8832a, #d06020);
+}
+
+.heat-rank-3 .heat-rank-num {
+    background: linear-gradient(135deg, #b8860b, #a07000);
+}
+
+.heat-rank-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.heat-rank-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.heat-rank-title a {
+    color: var(--md-on-surface);
+    text-decoration: none;
+}
+
+.heat-rank-title a:hover {
+    color: var(--md-primary);
+}
+
+.heat-rank-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--md-on-surface-variant);
+    margin-top: 2px;
+}
+
+.heat-rank-cat {
+    color: var(--md-tertiary);
+}
+
+.heat-rank-heat {
+    font-size: 0.75rem;
+    color: #e65100;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.heat-rank-source {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+}
+
+.heat-empty {
+    padding: var(--space-lg);
+    text-align: center;
+    color: var(--md-on-surface-variant);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .heat-rank-section {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- 跨平台热门 --- */
 .cross-platform-section {
     padding: var(--space-lg);

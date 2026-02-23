@@ -277,6 +277,51 @@ def api_dashboard():
     # 热度 top 分类 (前15)
     top_categories = dict(category_counter.most_common(15))
 
+    # --- 在读/热度排行 (男频/女频分开) ---
+    import re
+    def parse_heat(novel):
+        extra = novel.get("extra", {})
+        heat_str = extra.get("heat", "")
+        if not heat_str:
+            return 0.0
+        cleaned = re.sub(r'^[^\d.]*', '', heat_str)
+        m = re.match(r'([\d.]+)\s*(万)?', cleaned)
+        if not m:
+            return 0.0
+        val = float(m.group(1))
+        if m.group(2) == '万':
+            val *= 10000
+        return val
+
+    heat_male = []
+    heat_female = []
+    for novel in all_novels:
+        hv = parse_heat(novel)
+        if hv <= 0:
+            continue
+        item = {
+            "title": novel.get("title", ""),
+            "author": novel.get("author", ""),
+            "heat": novel.get("extra", {}).get("heat", ""),
+            "word_count": novel.get("extra", {}).get("word_count", ""),
+            "source": novel.get("source", ""),
+            "book_url": novel.get("book_url", ""),
+            "category": novel.get("category", ""),
+            "_hv": hv,
+        }
+        gender = novel.get("gender", "")
+        if gender == "男频":
+            heat_male.append(item)
+        elif gender == "女频":
+            heat_female.append(item)
+
+    heat_male.sort(key=lambda x: x["_hv"], reverse=True)
+    heat_female.sort(key=lambda x: x["_hv"], reverse=True)
+    # 去掉内部排序字段
+    for lst in (heat_male, heat_female):
+        for item in lst:
+            item.pop("_hv", None)
+
     return jsonify({
         "code": 0,
         "data": {
@@ -287,6 +332,8 @@ def api_dashboard():
             "gender_stats": dict(gender_counter),
             "period_stats": dict(period_counter),
             "cross_platform": cross_platform[:20],
+            "heat_rank_male": heat_male[:30],
+            "heat_rank_female": heat_female[:30],
             "has_data": True,
         },
     })

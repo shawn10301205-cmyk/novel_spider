@@ -188,7 +188,46 @@ function renderDashboard(data) {
     renderSourceStats(data.source_stats, data.total, data.date);
     renderGenderChart(data.gender_stats);
     renderCategoryChart(data.category_stats);
+    renderHeatRank(data.heat_rank_male || [], data.heat_rank_female || []);
     renderCrossPlatform(data.cross_platform);
+}
+
+function renderHeatRank(maleBooks, femaleBooks) {
+    renderHeatCol('heatRankMale', maleBooks);
+    renderHeatCol('heatRankFemale', femaleBooks);
+}
+
+function renderHeatCol(containerId, books) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (books.length === 0) {
+        el.innerHTML = '<div class="heat-empty">暂无热度数据</div>';
+        return;
+    }
+    let html = '';
+    books.forEach((b, idx) => {
+        const rankClass = idx < 3 ? `heat-rank-top heat-rank-${idx + 1}` : '';
+        const titleLink = b.book_url
+            ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
+            : escapeHtml(b.title);
+        const metaParts = [];
+        if (b.heat) metaParts.push(`🔥 ${escapeHtml(b.heat)}`);
+        if (b.word_count) metaParts.push(`📝 ${escapeHtml(b.word_count)}`);
+
+        html += `<div class="heat-rank-item ${rankClass}" style="animation-delay:${idx * 30}ms">
+            <span class="heat-rank-num">${idx + 1}</span>
+            <div class="heat-rank-info">
+                <div class="heat-rank-title">${titleLink}</div>
+                <div class="heat-rank-meta">
+                    <span>${escapeHtml(b.author || '-')}</span>
+                    <span class="heat-rank-cat">${escapeHtml(b.category || '')}</span>
+                </div>
+                ${metaParts.length ? `<div class="heat-rank-heat">${metaParts.join(' · ')}</div>` : ''}
+            </div>
+            <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
+        </div>`;
+    });
+    el.innerHTML = html;
 }
 
 function renderSourceStats(sourceStats, total, date) {
