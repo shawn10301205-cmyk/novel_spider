@@ -220,7 +220,7 @@ function renderHeatCol(containerId, books) {
                 <div class="heat-rank-title">${titleLink}</div>
                 <div class="heat-rank-meta">${escapeHtml(b.author || '-')}${b.word_count ? ` · 📝 ${escapeHtml(b.word_count)}` : ''}</div>
             </div>
-            <div class="heat-rank-heat">${b.heat ? `🔥 ${escapeHtml(b.heat)}` : ''}</div>
+            <div class="heat-rank-heat">${b.heat ? `🔥 ${escapeHtml(b.heat.startsWith('在读') ? b.heat : '在读：' + b.heat)}` : ''}</div>
             <span class="heat-rank-tag">${escapeHtml(b.category || '-')}</span>
             <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
         </div>`;
