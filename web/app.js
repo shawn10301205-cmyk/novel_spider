@@ -1,13 +1,13 @@
 /**
  * 小说排行榜前端 - Material 3 磨砂玻璃风格
- * 支持多数据源切换和汇总模式
+ * 支持多数据源切换、汇总模式、按天缓存
  */
 
 // ============================================================
 // 状态管理
 // ============================================================
 const state = {
-    source: '',        // 当前数据源（空=汇总模式）
+    source: '',
     gender: '',
     period: '',
     sort: 'rank',
@@ -16,24 +16,25 @@ const state = {
     sources: [],
     results: [],
     loading: false,
+    cached: false,
+    date: '',
 };
 
 // ============================================================
 // 初始化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // 恢复主题
     const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-    // 加载数据源 -> 再加载分类
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
     await loadSources();
     loadCategories();
+    // 自动加载当天数据
+    autoLoad();
 });
 
 // ============================================================
-// API 调用
+// API
 // ============================================================
 const API_BASE = '';
 
@@ -50,8 +51,7 @@ async function loadSources() {
         renderSourceChips();
     } catch (e) {
         console.error('加载数据源失败:', e);
-        document.getElementById('sourceChips').innerHTML =
-            '<span class="loading-text">数据源加载失败</span>';
+        document.getElementById('sourceChips').innerHTML = '<span class="loading-text">加载失败</span>';
     }
 }
 
@@ -62,13 +62,19 @@ async function loadCategories() {
         state.categories = res.data || [];
         renderCategoryChips();
     } catch (e) {
-        console.error('加载分类失败:', e);
-        document.getElementById('categoryChips').innerHTML =
-            '<span class="loading-text">分类加载失败</span>';
+        document.getElementById('categoryChips').innerHTML = '<span class="loading-text">加载失败</span>';
     }
 }
 
-async function doScrape() {
+async function autoLoad() {
+    // 检查是否有缓存，自动加载
+    const hasCached = state.sources.some(s => s.has_today);
+    if (hasCached) {
+        await doScrape(false); // 不强制刷新，优先用缓存
+    }
+}
+
+async function doScrape(force = false) {
     if (state.loading) return;
     state.loading = true;
 
@@ -78,46 +84,48 @@ async function doScrape() {
     showSection('loading');
 
     const isAllSources = !state.source;
-    updateLoadingMsg(isAllSources
-        ? '正在汇总所有数据源的排行榜...'
-        : `正在抓取 ${getSourceName(state.source)} 排行榜...`);
+    updateLoadingMsg(force ? '正在重新抓取最新数据...' : '正在加载数据...');
 
     const startTime = Date.now();
 
     try {
         let url;
+        const params = new URLSearchParams();
+        if (state.gender) params.set('gender', state.gender);
+        if (state.period) params.set('period', state.period);
+        if (state.sort) params.set('sort', state.sort);
+        if (force) params.set('force', '1');
+
         if (isAllSources) {
-            // 汇总模式
-            const params = new URLSearchParams();
-            if (state.gender) params.set('gender', state.gender);
-            if (state.period) params.set('period', state.period);
-            if (state.sort) params.set('sort', state.sort);
             url = `/api/scrape/all-sources?${params.toString()}`;
         } else {
-            // 单站模式
-            const params = new URLSearchParams();
             params.set('source', state.source);
-            if (state.gender) params.set('gender', state.gender);
-            if (state.period) params.set('period', state.period);
-            if (state.sort) params.set('sort', state.sort);
-            if (state.selectedCategories.length > 0) {
+            if (state.selectedCategories.length > 0)
                 params.set('category', state.selectedCategories.join(','));
-            }
             url = `/api/scrape?${params.toString()}`;
         }
 
         const res = await api(url);
         state.results = res.data || [];
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        state.cached = res.from_storage || false;
+        state.date = res.date || '';
 
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         updateStats(state.results.length, elapsed);
         renderResults(state.results);
         showSection('results');
-        showToast('success', `成功抓取 ${state.results.length} 条数据`);
+
+        const msg = state.cached
+            ? `已加载 ${state.results.length} 条缓存数据（${state.date}）`
+            : `成功抓取 ${state.results.length} 条新数据`;
+        showToast(state.cached ? 'info' : 'success', msg);
+
         document.getElementById('btnFeishu').disabled = state.results.length === 0;
+
+        // 刷新数据源状态
+        loadSources();
     } catch (e) {
-        console.error('抓取失败:', e);
-        showToast('error', `抓取失败: ${e.message}`);
+        showToast('error', `加载失败: ${e.message}`);
         showSection('empty');
     } finally {
         state.loading = false;
@@ -150,8 +158,7 @@ async function pushFeishu() {
 // UI 交互
 // ============================================================
 function selectSource(el) {
-    const group = el.parentElement;
-    group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state.source = el.dataset.value;
     state.selectedCategories = [];
@@ -159,8 +166,7 @@ function selectSource(el) {
 }
 
 function selectChip(el, type) {
-    const group = el.parentElement;
-    group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state[type] = el.dataset.value;
     if (type === 'gender') renderCategoryChips();
@@ -193,7 +199,6 @@ function getSourceName(id) {
 // ============================================================
 function renderSourceChips() {
     const container = document.getElementById('sourceChips');
-    // "汇总" chip + 各数据源
     let html = `
         <button class="chip active" data-value="" onclick="selectSource(this)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -201,10 +206,11 @@ function renderSourceChips() {
         </button>`;
 
     for (const src of state.sources) {
+        const cachedDot = src.has_today ? ' <span class="cache-dot" title="今日已有数据">●</span>' : '';
         html += `
             <button class="chip" data-value="${src.id}" onclick="selectSource(this)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/></svg>
-                ${escapeHtml(src.name)}
+                ${escapeHtml(src.name)}${cachedDot}
             </button>`;
     }
 
@@ -213,31 +219,18 @@ function renderSourceChips() {
 
 function renderCategoryChips() {
     const container = document.getElementById('categoryChips');
-
     if (!state.source) {
         container.innerHTML = '<span class="loading-text">汇总模式下自动抓取所有分类</span>';
         return;
     }
-
     let cats = state.categories;
     if (state.gender) cats = cats.filter(c => c.gender === state.gender);
-
-    const seen = new Set();
-    const unique = [];
-    for (const cat of cats) {
-        if (!seen.has(cat.name)) { seen.add(cat.name); unique.push(cat); }
-    }
-
-    if (unique.length === 0) {
-        container.innerHTML = '<span class="loading-text">暂无分类</span>';
-        return;
-    }
-
+    const seen = new Set(); const unique = [];
+    for (const cat of cats) { if (!seen.has(cat.name)) { seen.add(cat.name); unique.push(cat); } }
+    if (unique.length === 0) { container.innerHTML = '<span class="loading-text">暂无分类</span>'; return; }
     container.innerHTML = unique.map(cat => {
         const isActive = state.selectedCategories.includes(cat.name);
-        return `<button class="cat-chip ${isActive ? 'active' : ''}"
-                    data-name="${escapeHtml(cat.name)}"
-                    onclick="toggleCategory(this)">${escapeHtml(cat.name)}</button>`;
+        return `<button class="cat-chip ${isActive ? 'active' : ''}" data-name="${escapeHtml(cat.name)}" onclick="toggleCategory(this)">${escapeHtml(cat.name)}</button>`;
     }).join('');
 }
 
@@ -259,42 +252,28 @@ function renderResults(data) {
     let delay = 0;
 
     for (const [source, categories] of Object.entries(bySource)) {
-        // 来源标题（汇总模式下显示）
         const sourceCount = Object.values(categories).reduce((s, arr) => s + arr.length, 0);
         if (Object.keys(bySource).length > 1) {
             html += `
             <div class="source-header fade-in" style="animation-delay: ${delay}ms">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/>
-                </svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/></svg>
                 <h2>${escapeHtml(source)}</h2>
                 <span class="badge">${sourceCount}本</span>
             </div>`;
             delay += 50;
         }
-
         for (const [category, novels] of Object.entries(categories)) {
-            html += `
-            <div class="category-group fade-in" style="animation-delay: ${delay}ms">
+            html += `<div class="category-group fade-in" style="animation-delay: ${delay}ms">
                 <div class="category-group-header">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     <h3>${escapeHtml(category)}</h3>
                     <span class="badge">${novels.length}本</span>
-                </div>
-                <div class="novel-list">`;
-
-            for (const novel of novels) {
-                delay += 20;
-                html += renderNovelCard(novel, delay);
-            }
-
+                </div><div class="novel-list">`;
+            for (const novel of novels) { delay += 20; html += renderNovelCard(novel, delay); }
             html += `</div></div>`;
             delay += 30;
         }
     }
-
     container.innerHTML = html;
 }
 
@@ -337,9 +316,8 @@ function renderNovelCard(novel, delay) {
 function showSection(name) {
     const sections = { loading: 'loadingSection', results: 'resultsSection', empty: 'emptyState' };
     document.getElementById('statsBar').style.display = name === 'results' ? '' : 'none';
-    for (const [key, id] of Object.entries(sections)) {
+    for (const [key, id] of Object.entries(sections))
         document.getElementById(id).style.display = key === name ? '' : 'none';
-    }
 }
 
 function updateStats(total, elapsed) {
@@ -349,9 +327,7 @@ function updateStats(total, elapsed) {
     document.getElementById('statCategories').textContent = cats.size;
 }
 
-function updateLoadingMsg(msg) {
-    document.getElementById('loadingMsg').textContent = msg;
-}
+function updateLoadingMsg(msg) { document.getElementById('loadingMsg').textContent = msg; }
 
 function showToast(type, message) {
     const container = document.getElementById('toastContainer');

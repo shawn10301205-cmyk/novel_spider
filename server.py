@@ -13,6 +13,8 @@ import yaml
 from scrapers import SCRAPER_REGISTRY
 from sorter import apply_sort
 from exporters.feishu import FeishuExporter
+from storage import has_data, load_data, save_data, list_dates, today_str
+from models.novel import NovelRank
 
 app = Flask(__name__, static_folder="web", static_url_path="")
 CORS(app)
@@ -34,6 +36,16 @@ def get_scraper(source: str = "fanqie"):
     return entry["class"](config.get("scrape", {}))
 
 
+def _scrape_and_save(source_key: str, gender=None, period=None):
+    """抓取数据并存储，返回 dict 列表"""
+    scraper = get_scraper(source_key)
+    if not scraper:
+        return []
+    novels = scraper.scrape_all(gender=gender, period=period)
+    save_data(source_key, novels)
+    return [n.to_dict() for n in novels]
+
+
 @app.route("/")
 def index():
     return send_from_directory("web", "index.html")
@@ -44,7 +56,11 @@ def api_sources():
     """获取所有可用数据源"""
     sources = []
     for key, entry in SCRAPER_REGISTRY.items():
-        sources.append({"id": key, "name": entry["name"]})
+        sources.append({
+            "id": key,
+            "name": entry["name"],
+            "has_today": has_data(key),
+        })
     return jsonify({"code": 0, "data": sources})
 
 
@@ -61,55 +77,98 @@ def api_categories():
 
 @app.route("/api/scrape")
 def api_scrape():
-    """抓取排行榜"""
+    """抓取排行榜（优先读缓存）"""
     source = request.args.get("source", "fanqie")
     gender = request.args.get("gender") or None
     period = request.args.get("period") or None
-    category = request.args.get("category") or None
     sort_key = request.args.get("sort", "rank")
+    force = request.args.get("force", "0") == "1"
+    day = request.args.get("date") or today_str()
 
-    scraper = get_scraper(source)
-    if not scraper:
-        return jsonify({"code": 1, "msg": f"不支持的数据源: {source}"})
+    from_storage = False
 
-    if category:
-        category_names = [c.strip() for c in category.split(",")]
-        novels = scraper.scrape_categories(
-            category_names, gender=gender, period=period
-        )
+    # 优先读取已有数据
+    if not force and has_data(source, day):
+        data = load_data(source, day)
+        from_storage = True
     else:
-        novels = scraper.scrape_all(gender=gender, period=period)
+        data = _scrape_and_save(source, gender, period)
 
-    if sort_key:
+    # 筛选
+    if from_storage:
+        if gender:
+            gender_name = {"male": "男频", "female": "女频"}.get(gender, gender)
+            data = [d for d in data if d.get("gender") == gender_name]
+        if period:
+            data = [d for d in data if d.get("period") == period]
+
+    # 排序（将 dict 转回 NovelRank 排序再转回）
+    if sort_key and sort_key != "rank":
+        novels = [NovelRank(**{k: v for k, v in d.items() if k != "author_url"}) for d in data]
         novels = apply_sort(novels, sort_key)
+        data = [n.to_dict() for n in novels]
 
-    data = [n.to_dict() for n in novels]
-    return jsonify({"code": 0, "data": data, "total": len(data)})
+    return jsonify({
+        "code": 0,
+        "data": data,
+        "total": len(data),
+        "from_storage": from_storage,
+        "date": day,
+    })
 
 
 @app.route("/api/scrape/all-sources")
 def api_scrape_all_sources():
-    """抓取所有数据源（汇总模式）"""
+    """汇总所有数据源（优先读取已有数据）"""
     gender = request.args.get("gender") or None
     period = request.args.get("period") or None
     sort_key = request.args.get("sort", "rank")
+    force = request.args.get("force", "0") == "1"
+    day = request.args.get("date") or today_str()
 
-    config = load_config()
-    all_novels = []
+    all_data = []
+    any_stored = False
 
     for source_key, entry in SCRAPER_REGISTRY.items():
-        try:
-            scraper = entry["class"](config.get("scrape", {}))
-            novels = scraper.scrape_all(gender=gender, period=period)
-            all_novels.extend(novels)
-        except Exception as e:
-            print(f"⚠ {entry['name']} 抓取失败: {e}")
+        if not force and has_data(source_key, day):
+            data = load_data(source_key, day)
+            any_stored = True
+        else:
+            try:
+                data = _scrape_and_save(source_key, gender, period)
+            except Exception as e:
+                print(f"⚠ {entry['name']} 抓取失败: {e}")
+                continue
 
-    if sort_key:
-        all_novels = apply_sort(all_novels, sort_key)
+        # 筛选
+        if gender:
+            gender_name = {"male": "男频", "female": "女频"}.get(gender, gender)
+            data = [d for d in data if d.get("gender") == gender_name]
+        if period:
+            data = [d for d in data if d.get("period") == period]
 
-    data = [n.to_dict() for n in all_novels]
-    return jsonify({"code": 0, "data": data, "total": len(data)})
+        all_data.extend(data)
+
+    # 排序
+    if sort_key and sort_key != "rank":
+        novels = [NovelRank(**{k: v for k, v in d.items() if k != "author_url"}) for d in all_data]
+        novels = apply_sort(novels, sort_key)
+        all_data = [n.to_dict() for n in novels]
+
+    return jsonify({
+        "code": 0,
+        "data": all_data,
+        "total": len(all_data),
+        "from_storage": any_stored,
+        "date": day,
+    })
+
+
+@app.route("/api/dates")
+def api_dates():
+    """获取有历史数据的日期列表"""
+    dates = list_dates()
+    return jsonify({"code": 0, "data": dates})
 
 
 @app.route("/api/feishu/push", methods=["POST"])
@@ -125,7 +184,6 @@ def api_feishu_push():
     body = request.get_json(force=True)
     novels_data = body.get("data", [])
 
-    from models.novel import NovelRank
     novels = []
     for d in novels_data:
         novels.append(NovelRank(

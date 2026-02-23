@@ -502,6 +502,22 @@ body {
     display: none;
 }
 
+.btn-outline {
+    background: transparent;
+    color: var(--md-primary);
+    border: 1.5px solid var(--md-outline-variant);
+}
+
+.btn-outline:hover {
+    background: var(--md-surface-variant);
+}
+
+.cache-dot {
+    color: #22C55E;
+    font-size: 0.65rem;
+    vertical-align: super;
+}
+
 .btn.loading svg {
     animation: spin 1s linear infinite;
 }
