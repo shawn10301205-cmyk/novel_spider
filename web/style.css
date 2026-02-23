@@ -1326,6 +1326,256 @@ body {
     box-shadow: 0 2px 8px rgba(255, 165, 0, 0.3);
 }
 
+/* --- 交互式柱状图 --- */
+.bar-row-interactive {
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+.bar-row-interactive:hover {
+    background: var(--md-surface-variant);
+    transform: translateX(4px);
+}
+
+.bar-row-interactive .bar-value {
+    transition: color 0.2s;
+}
+
+.bar-row-interactive:hover .bar-value {
+    color: var(--md-tertiary);
+}
+
+/* --- 悬停提示 --- */
+.bar-tooltip {
+    position: fixed;
+    z-index: 500;
+    width: 280px;
+    padding: var(--space-md);
+    display: none;
+    animation: fadeIn 0.2s var(--ease-out);
+    pointer-events: none;
+}
+
+.tooltip-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.tooltip-loading {
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+    padding: var(--space-sm) 0;
+}
+
+.tooltip-books {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tooltip-book {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.tooltip-book-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--md-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.tooltip-book-meta {
+    font-size: 0.72rem;
+    color: var(--md-on-surface-variant);
+    flex-shrink: 0;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tooltip-more {
+    font-size: 0.78rem;
+    color: var(--md-primary);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* --- 分类详情弹窗 --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.25s var(--ease-out);
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 720px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.35s var(--ease-spring);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--md-outline-variant);
+    flex-shrink: 0;
+}
+
+.modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.modal-header-left svg {
+    color: var(--md-primary);
+}
+
+.modal-header h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-tertiary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-2xl);
+    color: var(--md-on-surface-variant);
+}
+
+.modal-empty {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--md-on-surface-variant);
+}
+
+.modal-stats {
+    font-size: 0.9rem;
+    color: var(--md-on-surface-variant);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.modal-stats strong {
+    color: var(--md-primary);
+}
+
+.modal-book-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.modal-book-card {
+    padding: var(--space-md);
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.modal-book-rank {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--md-surface-variant);
+    color: var(--md-on-surface-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.modal-book-info {
+    min-width: 0;
+}
+
+.modal-book-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-book-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.modal-book-title a:hover {
+    color: var(--md-primary);
+}
+
+.modal-book-meta {
+    display: flex;
+    gap: var(--space-md);
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+    flex-wrap: wrap;
+}
+
+.modal-book-tags {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 /* --- 响应式 --- */
 @media (max-width: 768px) {
     .app-container {

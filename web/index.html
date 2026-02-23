@@ -337,6 +337,30 @@
         </div>
     </div>
 
+    <!-- 分类详情弹窗 -->
+    <div class="modal-overlay" id="categoryModal" style="display:none"
+        onclick="if(event.target===this)closeCategoryModal()">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <h2 id="modalCategoryTitle">分类</h2>
+                </div>
+                <button class="icon-btn" onclick="closeCategoryModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalCategoryBody"></div>
+        </div>
+    </div>
+
     <!-- Toast 提示 -->
     <div class="toast-container" id="toastContainer"></div>
 

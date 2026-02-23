@@ -261,18 +261,133 @@ function renderCategoryChart(categoryStats) {
     entries.forEach(([cat, count], idx) => {
         const pct = (count / maxVal * 100).toFixed(1);
         const color = COLORS[idx % COLORS.length];
-        html += `<div class="bar-row">
+        html += `<div class="bar-row bar-row-interactive"
+                    data-category="${escapeHtml(cat)}"
+                    onclick="openCategoryDetail('${escapeHtml(cat)}')"
+                    onmouseenter="showBarTooltip(event, '${escapeHtml(cat)}', ${count})"
+                    onmouseleave="hideBarTooltip()">
             <span class="bar-label">${escapeHtml(cat)}</span>
             <div class="bar-track">
                 <div class="bar-fill" style="width:${pct}%;background:${color};animation-delay:${idx * 50}ms"></div>
             </div>
-            <span class="bar-value">${count}</span>
+            <span class="bar-value">${count} →</span>
         </div>`;
     });
     html += '</div>';
 
     container.innerHTML = html;
 }
+
+// 柱状图悬停提示
+let _tooltipTimer = null;
+function showBarTooltip(event, category, count) {
+    clearTimeout(_tooltipTimer);
+    // 延迟显示，避免快速滑过闪烁
+    _tooltipTimer = setTimeout(async () => {
+        let tooltip = document.getElementById('barTooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'barTooltip';
+            tooltip.className = 'bar-tooltip glass-card';
+            document.body.appendChild(tooltip);
+        }
+
+        // 先显示加载中
+        tooltip.innerHTML = `<div class="tooltip-title">${escapeHtml(category)} · ${count}本</div><div class="tooltip-loading">加载预览...</div>`;
+        tooltip.style.display = 'block';
+        positionTooltip(tooltip, event);
+
+        // 获取该分类的书籍列表
+        try {
+            const res = await api(`/api/category-books?category=${encodeURIComponent(category)}`);
+            const books = (res.data || []).slice(0, 8);
+            let listHtml = `<div class="tooltip-title">${escapeHtml(category)} · ${res.total}本</div>`;
+            listHtml += '<div class="tooltip-books">';
+            for (const b of books) {
+                listHtml += `<div class="tooltip-book">
+                    <span class="tooltip-book-title">${escapeHtml(b.title)}</span>
+                    <span class="tooltip-book-meta">${escapeHtml(b.author || '-')} · ${escapeHtml(b.source || '')}</span>
+                </div>`;
+            }
+            if (res.total > 8) listHtml += `<div class="tooltip-more">还有 ${res.total - 8} 本, 点击查看全部...</div>`;
+            listHtml += '</div>';
+            tooltip.innerHTML = listHtml;
+            positionTooltip(tooltip, event);
+        } catch (e) {
+            tooltip.innerHTML = `<div class="tooltip-title">${escapeHtml(category)}</div><div class="tooltip-loading">加载失败</div>`;
+        }
+    }, 200);
+}
+
+function positionTooltip(tooltip, event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    tooltip.style.left = Math.min(rect.right + 10, window.innerWidth - 320) + 'px';
+    tooltip.style.top = Math.max(10, rect.top - 20) + 'px';
+}
+
+function hideBarTooltip() {
+    clearTimeout(_tooltipTimer);
+    const tooltip = document.getElementById('barTooltip');
+    if (tooltip) tooltip.style.display = 'none';
+}
+
+// 分类详情弹窗
+async function openCategoryDetail(category) {
+    hideBarTooltip();
+    const modal = document.getElementById('categoryModal');
+    const title = document.getElementById('modalCategoryTitle');
+    const body = document.getElementById('modalCategoryBody');
+
+    title.textContent = category;
+    body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 加载中...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await api(`/api/category-books?category=${encodeURIComponent(category)}`);
+        const books = res.data || [];
+
+        if (books.length === 0) {
+            body.innerHTML = '<div class="modal-empty">暂无数据</div>';
+            return;
+        }
+
+        let html = `<div class="modal-stats">共 <strong>${books.length}</strong> 本 · 来自 <strong>${new Set(books.map(b => b.source)).size}</strong> 个平台</div>`;
+        html += '<div class="modal-book-list">';
+
+        for (const book of books) {
+            const bookLink = book.book_url
+                ? `<a href="${escapeHtml(book.book_url)}" target="_blank" rel="noopener">${escapeHtml(book.title)}</a>`
+                : escapeHtml(book.title);
+            const genderClass = book.gender === '男频' ? 'tag-gender-male' : 'tag-gender-female';
+
+            html += `<div class="modal-book-card glass-card">
+                <div class="modal-book-rank">${book.rank || '-'}</div>
+                <div class="modal-book-info">
+                    <div class="modal-book-title">${bookLink}</div>
+                    <div class="modal-book-meta">
+                        <span>✍ ${escapeHtml(book.author || '未知作者')}</span>
+                        <span>📖 ${escapeHtml(book.latest_chapter || '-')}</span>
+                    </div>
+                </div>
+                <div class="modal-book-tags">
+                    <span class="tag ${genderClass}">${escapeHtml(book.gender || '-')}</span>
+                    <span class="tag tag-period">${escapeHtml(book.period || '-')}</span>
+                    <span class="tag tag-source">${escapeHtml(book.source || '-')}</span>
+                </div>
+            </div>`;
+        }
+
+        html += '</div>';
+        body.innerHTML = html;
+    } catch (e) {
+        body.innerHTML = `<div class="modal-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function closeCategoryModal() {
+    document.getElementById('categoryModal').style.display = 'none';
+}
+
 
 function renderCrossPlatform(crossPlatform) {
     const container = document.getElementById('crossPlatformTable');

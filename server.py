@@ -299,6 +299,43 @@ def api_dates():
     return jsonify({"code": 0, "data": dates})
 
 
+@app.route("/api/category-books")
+def api_category_books():
+    """获取指定分类的所有书籍详情"""
+    category = request.args.get("category", "")
+    day = request.args.get("date") or today_str()
+
+    if not category:
+        return jsonify({"code": 1, "msg": "缺少 category 参数"})
+
+    all_books = []
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        if not has_data(source_key, day):
+            continue
+        data = load_data(source_key, day)
+        for novel in data:
+            if novel.get("category") == category:
+                all_books.append({
+                    "title": novel.get("title", ""),
+                    "author": novel.get("author", ""),
+                    "category": novel.get("category", ""),
+                    "gender": novel.get("gender", ""),
+                    "period": novel.get("period", ""),
+                    "source": novel.get("source", ""),
+                    "book_url": novel.get("book_url", ""),
+                    "rank": novel.get("rank", 0),
+                    "latest_chapter": novel.get("latest_chapter", ""),
+                })
+
+    return jsonify({
+        "code": 0,
+        "data": all_books,
+        "total": len(all_books),
+        "category": category,
+        "date": day,
+    })
+
+
 @app.route("/api/feishu/push", methods=["POST"])
 def api_feishu_push():
     """推送到飞书"""
