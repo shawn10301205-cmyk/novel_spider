@@ -38,6 +38,14 @@
                 <h1 class="app-title">小说市场看板</h1>
             </div>
             <div class="header-right">
+                <button class="icon-btn" id="btnSettings" title="设置" onclick="openSettingsModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
                 <button class="icon-btn" id="btnTheme" title="切换主题" onclick="toggleTheme()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2"
@@ -311,7 +319,8 @@
                     <div class="stat-info"><span class="stat-value" id="statTotal">0</span><span
                             class="stat-label">总书籍</span></div>
                 </div>
-                <div class="stat-card glass-card" style="cursor:pointer" onclick="openCategoryRankModal()" title="点击查看分类热度排行">
+                <div class="stat-card glass-card" style="cursor:pointer" onclick="openCategoryRankModal()"
+                    title="点击查看分类热度排行">
                     <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
@@ -383,6 +392,53 @@
                 </button>
             </div>
             <div class="modal-body" id="modalCategoryBody"></div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal" style="display:none"
+        onclick="if(event.target===this)closeSettingsModal()">
+        <div class="modal-content glass-card" style="max-width:480px">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h2>设置</h2>
+                </div>
+                <button class="icon-btn" onclick="closeSettingsModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3 class="settings-title">⏰ 每日定时同步</h3>
+                    <p class="settings-desc">设置每天自动拉取所有平台排行榜数据的时间</p>
+                    <div class="settings-row">
+                        <label class="settings-label">启用定时同步</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settingsEnabled">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-row">
+                        <label class="settings-label">同步时间</label>
+                        <input type="time" id="settingsSyncTime" class="glass-input settings-time-input" value="08:00">
+                    </div>
+                    <div class="settings-row" id="settingsLastSync" style="display:none">
+                        <label class="settings-label">上次同步</label>
+                        <span class="settings-value" id="settingsLastSyncText">-</span>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+                </div>
+            </div>
         </div>
     </div>
 

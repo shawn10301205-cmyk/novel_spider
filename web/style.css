@@ -1745,6 +1745,107 @@ body {
     justify-content: flex-end;
 }
 
+/* --- 设置弹窗 --- */
+.settings-section {
+    margin-bottom: var(--space-lg);
+}
+
+.settings-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: 4px;
+}
+
+.settings-desc {
+    font-size: 0.82rem;
+    color: var(--md-on-surface-variant);
+    margin-bottom: var(--space-lg);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--md-on-surface);
+}
+
+.settings-value {
+    font-size: 0.82rem;
+    color: var(--md-on-surface-variant);
+}
+
+.settings-time-input {
+    width: 120px;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+}
+
+.settings-actions {
+    padding-top: var(--space-md);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Toggle 开关 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--md-surface-variant);
+    border-radius: 26px;
+    transition: 0.3s;
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background: var(--md-primary);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(22px);
+}
+
 /* --- 弹窗内热度排行 --- */
 .modal-heat-rank-list {
     max-height: 500px;

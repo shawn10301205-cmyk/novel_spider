@@ -3,6 +3,8 @@
 
 import sys
 import os
+import threading
+import datetime
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,6 +22,78 @@ from models.novel import NovelRank
 app = Flask(__name__, static_folder="web", static_url_path="")
 CORS(app)
 
+# ============================================================
+# 定时调度器
+# ============================================================
+_scheduler_timer = None
+_scheduler_lock = threading.Lock()
+_last_sync_result = {"time": None, "status": None, "detail": None}
+
+
+def _run_scheduled_sync():
+    """定时同步任务：全量抓取所有数据源"""
+    global _last_sync_result
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"⏰ [{now}] 定时同步任务开始...")
+    errors = []
+    total = 0
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        try:
+            scraper = get_scraper(source_key)
+            if scraper:
+                novels = scraper.scrape_all()
+                save_data(source_key, novels)
+                count = len(novels)
+                total += count
+                print(f"  ✅ {entry['name']}: {count} 条")
+        except Exception as e:
+            errors.append(f"{entry['name']}: {e}")
+            print(f"  ❌ {entry['name']}: {e}")
+
+    _last_sync_result = {
+        "time": now,
+        "status": "success" if not errors else "partial",
+        "total": total,
+        "errors": errors,
+    }
+    print(f"⏰ [{now}] 定时同步完成，共 {total} 条")
+
+    # 调度下一次
+    _schedule_next()
+
+
+def _schedule_next():
+    """根据配置计算下次执行时间并设置定时器"""
+    global _scheduler_timer
+    config = load_config()
+    sync_time = config.get("schedule", {}).get("sync_time", "")
+    enabled = config.get("schedule", {}).get("enabled", False)
+
+    with _scheduler_lock:
+        if _scheduler_timer:
+            _scheduler_timer.cancel()
+            _scheduler_timer = None
+
+        if not enabled or not sync_time:
+            return
+
+        try:
+            hour, minute = map(int, sync_time.split(":"))
+        except (ValueError, AttributeError):
+            return
+
+        now = datetime.datetime.now()
+        target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if target <= now:
+            target += datetime.timedelta(days=1)
+
+        delay = (target - now).total_seconds()
+        print(f"⏰ 下次同步时间: {target.strftime('%Y-%m-%d %H:%M')} (约 {delay/3600:.1f} 小时后)")
+
+        _scheduler_timer = threading.Timer(delay, _run_scheduled_sync)
+        _scheduler_timer.daemon = True
+        _scheduler_timer.start()
+
 
 def load_config() -> dict:
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
@@ -27,6 +101,12 @@ def load_config() -> dict:
         with open(config_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     return {}
+
+
+def save_config(config: dict):
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
 
 
 def get_scraper(source: str = "fanqie"):
@@ -518,5 +598,61 @@ def api_feishu_push():
         return jsonify({"code": 1, "msg": str(e)})
 
 
+@app.route("/api/settings", methods=["GET"])
+def api_settings_get():
+    """获取设置"""
+    config = load_config()
+    schedule = config.get("schedule", {})
+    return jsonify({
+        "code": 0,
+        "data": {
+            "sync_time": schedule.get("sync_time", ""),
+            "enabled": schedule.get("enabled", False),
+            "last_sync": _last_sync_result,
+        },
+    })
+
+
+@app.route("/api/settings", methods=["POST"])
+def api_settings_save():
+    """保存设置"""
+    body = request.get_json(force=True)
+    config = load_config()
+
+    if "schedule" not in config:
+        config["schedule"] = {}
+
+    sync_time = body.get("sync_time", "").strip()
+    enabled = body.get("enabled", False)
+
+    # 校验时间格式
+    if sync_time:
+        try:
+            h, m = map(int, sync_time.split(":"))
+            if not (0 <= h <= 23 and 0 <= m <= 59):
+                raise ValueError
+            sync_time = f"{h:02d}:{m:02d}"
+        except (ValueError, AttributeError):
+            return jsonify({"code": 1, "msg": "时间格式错误，请使用 HH:MM"})
+
+    config["schedule"]["sync_time"] = sync_time
+    config["schedule"]["enabled"] = bool(enabled)
+    save_config(config)
+
+    # 重新调度
+    _schedule_next()
+
+    return jsonify({
+        "code": 0,
+        "msg": "设置已保存",
+        "data": {
+            "sync_time": sync_time,
+            "enabled": enabled,
+        },
+    })
+
+
 if __name__ == "__main__":
+    # 启动时自动调度
+    _schedule_next()
     app.run(host="0.0.0.0", port=8080, debug=False)

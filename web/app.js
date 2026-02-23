@@ -776,6 +776,63 @@ function toggleTheme() {
     localStorage.setItem('theme', isDark ? '' : 'dark');
 }
 
+// ============================================================
+// 设置弹窗
+// ============================================================
+async function openSettingsModal() {
+    const modal = document.getElementById('settingsModal');
+    modal.style.display = 'flex';
+
+    try {
+        const res = await api('/api/settings');
+        const data = res.data || {};
+        document.getElementById('settingsEnabled').checked = data.enabled || false;
+        document.getElementById('settingsSyncTime').value = data.sync_time || '08:00';
+
+        // 显示上次同步信息
+        const lastSync = data.last_sync || {};
+        const lastSyncRow = document.getElementById('settingsLastSync');
+        if (lastSync.time) {
+            lastSyncRow.style.display = 'flex';
+            const statusIcon = lastSync.status === 'success' ? '✅' : '⚠️';
+            document.getElementById('settingsLastSyncText').textContent =
+                `${statusIcon} ${lastSync.time} · ${lastSync.total || 0}条`;
+        } else {
+            lastSyncRow.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('加载设置失败', e);
+    }
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+async function saveSettings() {
+    const enabled = document.getElementById('settingsEnabled').checked;
+    const syncTime = document.getElementById('settingsSyncTime').value;
+
+    try {
+        const res = await api('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled, sync_time: syncTime }),
+        });
+
+        if (res.code === 0) {
+            showToast('success', enabled
+                ? `定时同步已开启，每天 ${syncTime} 自动拉取数据`
+                : '定时同步已关闭');
+            closeSettingsModal();
+        } else {
+            showToast('error', res.msg || '保存失败');
+        }
+    } catch (e) {
+        showToast('error', '保存失败: ' + e.message);
+    }
+}
+
 function getSourceName(id) {
     const s = state.sources.find(s => s.id === id);
     return s ? s.name : id;
