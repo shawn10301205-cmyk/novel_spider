@@ -1019,14 +1019,18 @@ function renderNovelCard(novel, delay, globalRank) {
         : escapeHtml(novel.title);
 
     const extra = novel.extra || {};
-    let extraHtml = '';
-    if (extra.heat || extra.word_count || extra.status) {
-        const parts = [];
-        if (extra.heat) parts.push(`🔥 ${escapeHtml(extra.heat)}`);
-        if (extra.word_count) parts.push(`📝 ${escapeHtml(extra.word_count)}`);
-        if (extra.status) parts.push(escapeHtml(extra.status));
-        extraHtml = `<div class="novel-extra">${parts.join(' · ')}</div>`;
+
+    // 在读热度 — 突出显示
+    let heatHtml = '';
+    if (extra.heat) {
+        heatHtml = `<span class="novel-heat-badge">🔥 在读 ${escapeHtml(extra.heat)}</span>`;
     }
+
+    // 辅助信息 — 弱化
+    let subParts = [];
+    if (extra.word_count) subParts.push(`📝 ${escapeHtml(extra.word_count)}`);
+    if (extra.status) subParts.push(escapeHtml(extra.status));
+    const subHtml = subParts.length > 0 ? `<span class="novel-extra-sub">${subParts.join(' · ')}</span>` : '';
 
     return `
     <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms">
@@ -1042,10 +1046,11 @@ function renderNovelCard(novel, delay, globalRank) {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
                     ${escapeHtml(novel.category || '-')}
                 </span>
+                ${subHtml}
             </div>
-            ${extraHtml}
         </div>
         <div class="novel-tags">
+            ${heatHtml}
             <span class="tag ${genderClass}">${escapeHtml(novel.gender || '-')}</span>
             ${novel.source ? `<span class="tag tag-source">${escapeHtml(novel.source)}</span>` : ''}
         </div>
