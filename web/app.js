@@ -416,19 +416,81 @@ function hideBarTooltip() {
     if (tooltip) tooltip.style.display = 'none';
 }
 
-// 分类详情弹窗
+// 分类详情弹窗 — 按在读/热度排行前10
 async function openCategoryDetail(category) {
     hideBarTooltip();
     const modal = document.getElementById('categoryModal');
     const title = document.getElementById('modalCategoryTitle');
     const body = document.getElementById('modalCategoryBody');
 
-    title.textContent = category;
+    title.textContent = `${category} · 在读排行`;
     body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 加载中...</div>';
     modal.style.display = 'flex';
 
     try {
-        const res = await api(`/api/category-books?category=${encodeURIComponent(category)}`);
+        const res = await api(`/api/category-books?category=${encodeURIComponent(category)}&sort=heat&limit=10`);
+        const books = res.data || [];
+        const total = res.total || 0;
+
+        if (books.length === 0) {
+            body.innerHTML = '<div class="modal-empty">暂无数据</div>';
+            return;
+        }
+
+        let html = `<div class="modal-stats">共 <strong>${total}</strong> 本 · 展示热度 Top <strong>${books.length}</strong> · 来自 <strong>${new Set(books.map(b => b.source)).size}</strong> 个平台</div>`;
+        html += '<div class="modal-heat-rank-list">';
+
+        books.forEach((b, idx) => {
+            const rankClass = idx < 3 ? `heat-rank-top heat-rank-${idx + 1}` : '';
+            const titleLink = b.book_url
+                ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
+                : escapeHtml(b.title);
+
+            const extra = b.extra || {};
+            const heatDisplay = extra.heat
+                ? `🔥 ${escapeHtml(extra.heat.startsWith('在读') ? extra.heat : '在读：' + extra.heat)}`
+                : '';
+            const genderClass = b.gender === '男频' ? 'tag-gender-male' : 'tag-gender-female';
+
+            html += `<div class="heat-rank-item ${rankClass}" style="animation-delay:${idx * 40}ms">
+                <span class="heat-rank-num">${idx + 1}</span>
+                <div class="heat-rank-info">
+                    <div class="heat-rank-title">${titleLink}</div>
+                    <div class="heat-rank-meta">${escapeHtml(b.author || '-')}${extra.word_count ? ` · 📝 ${escapeHtml(extra.word_count)}` : ''}</div>
+                </div>
+                <div class="heat-rank-heat">${heatDisplay}</div>
+                <span class="tag ${genderClass}" style="margin-right:4px">${escapeHtml(b.gender || '-')}</span>
+                <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
+            </div>`;
+        });
+
+        html += '</div>';
+
+        // 如果总数超过10，添加"查看全部"按钮
+        if (total > 10) {
+            html += `<div class="modal-show-all">
+                <button class="btn btn-outline btn-sm" onclick="openCategoryAll('${escapeHtml(category)}')">
+                    查看全部 ${total} 本 →
+                </button>
+            </div>`;
+        }
+
+        body.innerHTML = html;
+    } catch (e) {
+        body.innerHTML = `<div class="modal-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+// 查看某分类全部书籍（按热度排序）
+async function openCategoryAll(category) {
+    const title = document.getElementById('modalCategoryTitle');
+    const body = document.getElementById('modalCategoryBody');
+
+    title.textContent = `${category} · 全部书籍`;
+    body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 加载中...</div>';
+
+    try {
+        const res = await api(`/api/category-books?category=${encodeURIComponent(category)}&sort=heat`);
         const books = res.data || [];
 
         if (books.length === 0) {
@@ -436,10 +498,11 @@ async function openCategoryDetail(category) {
             return;
         }
 
-        let html = `<div class="modal-stats">共 <strong>${books.length}</strong> 本 · 来自 <strong>${new Set(books.map(b => b.source)).size}</strong> 个平台</div>`;
+        let html = `<div class="modal-stats">共 <strong>${books.length}</strong> 本 · 来自 <strong>${new Set(books.map(b => b.source)).size}</strong> 个平台 · 按在读热度排序</div>`;
+        html += `<div class="modal-back-btn"><button class="btn btn-outline btn-sm" onclick="openCategoryDetail('${escapeHtml(category)}')">← 返回 Top 10</button></div>`;
         html += '<div class="modal-book-list">';
 
-        for (const book of books) {
+        for (const [idx, book] of books.entries()) {
             const bookLink = book.book_url
                 ? `<a href="${escapeHtml(book.book_url)}" target="_blank" rel="noopener">${escapeHtml(book.title)}</a>`
                 : escapeHtml(book.title);
@@ -452,7 +515,7 @@ async function openCategoryDetail(category) {
             const extraLine = extraParts.length ? `<div class="novel-extra">${extraParts.join(' · ')}</div>` : '';
 
             html += `<div class="modal-book-card glass-card">
-                <div class="modal-book-rank">${book.rank || '-'}</div>
+                <div class="modal-book-rank">${idx + 1}</div>
                 <div class="modal-book-info">
                     <div class="modal-book-title">${bookLink}</div>
                     <div class="modal-book-meta">
@@ -476,6 +539,100 @@ async function openCategoryDetail(category) {
 
 function closeCategoryModal() {
     document.getElementById('categoryModal').style.display = 'none';
+}
+
+// 分类排行弹窗 — 按各分类在读前10累加倒排
+async function openCategoryRankModal() {
+    const modal = document.getElementById('categoryModal');
+    const title = document.getElementById('modalCategoryTitle');
+    const body = document.getElementById('modalCategoryBody');
+
+    title.textContent = '分类热度排行';
+    body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 计算中...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await api('/api/category-rank');
+        const categories = res.data || [];
+
+        if (categories.length === 0) {
+            body.innerHTML = '<div class="modal-empty">暂无数据</div>';
+            return;
+        }
+
+        const maxHeat = categories[0].total_heat || 1;
+
+        let html = `<div class="modal-stats">共 <strong>${categories.length}</strong> 个分类 · 按在读 Top10 累加热度排序</div>`;
+        html += '<div class="cat-rank-list">';
+
+        categories.forEach((cat, idx) => {
+            const pct = (cat.total_heat / maxHeat * 100).toFixed(1);
+            const rankClass = idx < 3 ? `cat-rank-top cat-rank-${idx + 1}` : '';
+            const heatDisplay = cat.total_heat >= 10000
+                ? (cat.total_heat / 10000).toFixed(1) + '万'
+                : Math.round(cat.total_heat).toLocaleString();
+
+            // Top10 书籍预览
+            let booksHtml = '';
+            if (cat.top10 && cat.top10.length > 0) {
+                booksHtml = '<div class="cat-rank-books" style="display:none">';
+                cat.top10.forEach((b, bi) => {
+                    const heatVal = b.heat || '';
+                    const titleLink = b.book_url
+                        ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
+                        : escapeHtml(b.title);
+                    booksHtml += `<div class="cat-rank-book-item">
+                        <span class="cat-rank-book-idx">${bi + 1}</span>
+                        <span class="cat-rank-book-title">${titleLink}</span>
+                        <span class="cat-rank-book-author">${escapeHtml(b.author || '')}</span>
+                        <span class="cat-rank-book-heat">${heatVal ? '🔥' + escapeHtml(heatVal) : ''}</span>
+                        <span class="tag tag-source" style="font-size:0.65rem">${escapeHtml(b.source || '')}</span>
+                    </div>`;
+                });
+                booksHtml += '</div>';
+            }
+
+            html += `<div class="cat-rank-item ${rankClass}" style="animation-delay:${idx * 30}ms">
+                <div class="cat-rank-header" onclick="toggleCatBooks(this)">
+                    <span class="cat-rank-num">${idx + 1}</span>
+                    <div class="cat-rank-info">
+                        <div class="cat-rank-name">${escapeHtml(cat.category)}</div>
+                        <div class="cat-rank-bar-track">
+                            <div class="cat-rank-bar-fill" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                    <div class="cat-rank-meta">
+                        <span class="cat-rank-heat">🔥 ${heatDisplay}</span>
+                        <span class="cat-rank-count">${cat.book_count}本</span>
+                    </div>
+                    <span class="cat-rank-expand">▸</span>
+                </div>
+                ${booksHtml}
+            </div>`;
+        });
+
+        html += '</div>';
+        body.innerHTML = html;
+    } catch (e) {
+        body.innerHTML = `<div class="modal-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+// 展开/收起分类下的书籍列表
+function toggleCatBooks(headerEl) {
+    const item = headerEl.closest('.cat-rank-item');
+    const books = item.querySelector('.cat-rank-books');
+    const arrow = item.querySelector('.cat-rank-expand');
+    if (!books) return;
+    if (books.style.display === 'none') {
+        books.style.display = 'block';
+        arrow.textContent = '▾';
+        item.classList.add('cat-rank-expanded');
+    } else {
+        books.style.display = 'none';
+        arrow.textContent = '▸';
+        item.classList.remove('cat-rank-expanded');
+    }
 }
 
 

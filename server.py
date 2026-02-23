@@ -348,12 +348,29 @@ def api_dates():
 
 @app.route("/api/category-books")
 def api_category_books():
-    """获取指定分类的所有书籍详情"""
+    """获取指定分类的所有书籍详情，按热度排序"""
+    import re
+
     category = request.args.get("category", "")
     day = request.args.get("date") or today_str()
+    sort_by = request.args.get("sort", "heat")  # heat | rank
+    limit = request.args.get("limit", type=int)  # 可选限制条数
 
     if not category:
         return jsonify({"code": 1, "msg": "缺少 category 参数"})
+
+    def _parse_heat(extra):
+        heat_str = extra.get("heat", "")
+        if not heat_str:
+            return 0.0
+        cleaned = re.sub(r'^[^\d.]*', '', heat_str)
+        m = re.match(r'([\d.]+)\s*(万)?', cleaned)
+        if not m:
+            return 0.0
+        val = float(m.group(1))
+        if m.group(2) == '万':
+            val *= 10000
+        return val
 
     all_books = []
     for source_key, entry in SCRAPER_REGISTRY.items():
@@ -362,6 +379,7 @@ def api_category_books():
         data = load_data(source_key, day)
         for novel in data:
             if novel.get("category") == category:
+                extra = novel.get("extra", {})
                 all_books.append({
                     "title": novel.get("title", ""),
                     "author": novel.get("author", ""),
@@ -372,14 +390,96 @@ def api_category_books():
                     "book_url": novel.get("book_url", ""),
                     "rank": novel.get("rank", 0),
                     "latest_chapter": novel.get("latest_chapter", ""),
-                    "extra": novel.get("extra", {}),
+                    "extra": extra,
+                    "heat_value": _parse_heat(extra),
                 })
+
+    # 按热度降序排列
+    if sort_by == "heat":
+        all_books.sort(key=lambda x: x["heat_value"], reverse=True)
+    else:
+        all_books.sort(key=lambda x: x["rank"])
+
+    total = len(all_books)
+    if limit and limit > 0:
+        all_books = all_books[:limit]
 
     return jsonify({
         "code": 0,
         "data": all_books,
-        "total": len(all_books),
+        "total": total,
+        "returned": len(all_books),
         "category": category,
+        "date": day,
+    })
+
+
+@app.route("/api/category-rank")
+def api_category_rank():
+    """分类排行：按各分类在读前10热度值累加倒排"""
+    import re
+    from collections import defaultdict
+
+    day = request.args.get("date") or today_str()
+
+    def _parse_heat(extra):
+        heat_str = extra.get("heat", "")
+        if not heat_str:
+            return 0.0
+        cleaned = re.sub(r'^[^\d.]*', '', heat_str)
+        m = re.match(r'([\d.]+)\s*(万)?', cleaned)
+        if not m:
+            return 0.0
+        val = float(m.group(1))
+        if m.group(2) == '万':
+            val *= 10000
+        return val
+
+    # 收集全部数据
+    all_novels = []
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        if has_data(source_key, day):
+            all_novels.extend(load_data(source_key, day))
+
+    if not all_novels:
+        return jsonify({"code": 0, "data": [], "date": day})
+
+    # 按分类归组，每个分类收集所有热度值
+    cat_books = defaultdict(list)
+    for novel in all_novels:
+        cat = novel.get("category", "未分类")
+        hv = _parse_heat(novel.get("extra", {}))
+        cat_books[cat].append({
+            "title": novel.get("title", ""),
+            "author": novel.get("author", ""),
+            "heat": novel.get("extra", {}).get("heat", ""),
+            "heat_value": hv,
+            "source": novel.get("source", ""),
+            "gender": novel.get("gender", ""),
+            "book_url": novel.get("book_url", ""),
+        })
+
+    # 每个分类取热度前10累加
+    category_rank = []
+    for cat, books in cat_books.items():
+        books.sort(key=lambda x: x["heat_value"], reverse=True)
+        top10 = books[:10]
+        total_heat = sum(b["heat_value"] for b in top10)
+        category_rank.append({
+            "category": cat,
+            "total_heat": total_heat,
+            "book_count": len(books),
+            "top10_count": len(top10),
+            "top10": top10,
+        })
+
+    # 按累加热度倒排
+    category_rank.sort(key=lambda x: x["total_heat"], reverse=True)
+
+    return jsonify({
+        "code": 0,
+        "data": category_rank,
+        "total": len(category_rank),
         "date": day,
     })
 

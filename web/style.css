@@ -1745,6 +1745,201 @@ body {
     justify-content: flex-end;
 }
 
+/* --- 弹窗内热度排行 --- */
+.modal-heat-rank-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.modal-show-all {
+    text-align: center;
+    padding: var(--space-lg) 0 var(--space-sm);
+}
+
+.modal-back-btn {
+    margin-bottom: var(--space-md);
+}
+
+.btn-sm {
+    padding: 6px 16px;
+    font-size: 0.82rem;
+}
+
+/* --- 分类排行弹窗 --- */
+.cat-rank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cat-rank-item {
+    border-radius: 10px;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease both;
+    transition: background 0.2s;
+}
+
+.cat-rank-item:hover {
+    background: var(--md-surface-variant);
+}
+
+.cat-rank-expanded {
+    background: var(--md-surface-variant);
+}
+
+.cat-rank-header {
+    display: grid;
+    grid-template-columns: 32px 1fr auto 20px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cat-rank-num {
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--md-on-surface-variant);
+    background: var(--md-surface);
+    flex-shrink: 0;
+}
+
+.cat-rank-top .cat-rank-num {
+    color: #fff;
+}
+
+.cat-rank-1 .cat-rank-num {
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+}
+
+.cat-rank-2 .cat-rank-num {
+    background: linear-gradient(135deg, #e8832a, #d06020);
+}
+
+.cat-rank-3 .cat-rank-num {
+    background: linear-gradient(135deg, #b8860b, #a07000);
+}
+
+.cat-rank-info {
+    min-width: 0;
+}
+
+.cat-rank-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: 4px;
+}
+
+.cat-rank-bar-track {
+    height: 6px;
+    background: var(--md-surface);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.cat-rank-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--md-primary), var(--md-tertiary));
+    animation: barGrow 0.6s var(--ease-out) both;
+    min-width: 3px;
+}
+
+.cat-rank-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.cat-rank-heat {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e65100;
+    white-space: nowrap;
+}
+
+.cat-rank-count {
+    font-size: 0.72rem;
+    color: var(--md-on-surface-variant);
+}
+
+.cat-rank-expand {
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+    transition: transform 0.2s;
+}
+
+/* 展开后的书籍子列表 */
+.cat-rank-books {
+    padding: 0 12px 10px 54px;
+    animation: fadeIn 0.2s ease;
+}
+
+.cat-rank-book-item {
+    display: grid;
+    grid-template-columns: 20px 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--md-outline-variant);
+    font-size: 0.8rem;
+}
+
+.cat-rank-book-item:last-child {
+    border-bottom: none;
+}
+
+.cat-rank-book-idx {
+    color: var(--md-on-surface-variant);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+.cat-rank-book-title {
+    font-weight: 500;
+    color: var(--md-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-rank-book-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.cat-rank-book-title a:hover {
+    color: var(--md-primary);
+}
+
+.cat-rank-book-author {
+    color: var(--md-on-surface-variant);
+    font-size: 0.72rem;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-rank-book-heat {
+    color: #e65100;
+    font-weight: 600;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
 /* --- 响应式 --- */
 @media (max-width: 768px) {
     .app-container {
