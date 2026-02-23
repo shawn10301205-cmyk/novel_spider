@@ -1,0 +1,10 @@
+feishu:
+  app_id: ""
+  app_secret: ""
+  app_token: ""       # 多维表格 app_token
+  table_id: ""         # 数据表 ID
+
+scrape:
+  default_source: fanqie
+  delay: 1             # 请求间隔（秒）
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
