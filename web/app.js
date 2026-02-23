@@ -218,9 +218,9 @@ function renderHeatCol(containerId, books) {
             <span class="heat-rank-num">${idx + 1}</span>
             <div class="heat-rank-info">
                 <div class="heat-rank-title">${titleLink}</div>
-                <div class="heat-rank-meta">${escapeHtml(b.author || '-')}</div>
+                <div class="heat-rank-meta">${escapeHtml(b.author || '-')}${b.word_count ? ` · 📝 ${escapeHtml(b.word_count)}` : ''}</div>
             </div>
-            <div class="heat-rank-heat">${heatText.join('<br>')}</div>
+            <div class="heat-rank-heat">${b.heat ? `🔥 ${escapeHtml(b.heat)}` : ''}</div>
             <span class="heat-rank-tag">${escapeHtml(b.category || '-')}</span>
             <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
         </div>`;
