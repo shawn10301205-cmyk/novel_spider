@@ -95,3 +95,15 @@ def list_dates() -> list[str]:
                 day = parts[1].replace(".json", "")
                 dates.add(day)
     return sorted(dates, reverse=True)
+
+
+def latest_date() -> str:
+    """返回最近有数据的日期，优先今天，否则历史最新"""
+    today = today_str()
+    # 今天有数据则用今天
+    today_dir = os.path.join(DATA_DIR, today)
+    if os.path.isdir(today_dir) and os.listdir(today_dir):
+        return today
+    # 否则取历史最新
+    dates = list_dates()
+    return dates[0] if dates else today

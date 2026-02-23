@@ -16,7 +16,7 @@ import yaml
 from scrapers import SCRAPER_REGISTRY
 from sorter import apply_sort
 from exporters.feishu import FeishuExporter
-from storage import has_data, load_data, save_data, list_dates, today_str
+from storage import has_data, load_data, save_data, list_dates, today_str, latest_date
 from models.novel import NovelRank
 
 app = Flask(__name__, static_folder="web", static_url_path="")
@@ -158,22 +158,36 @@ def api_categories():
 
 @app.route("/api/scrape")
 def api_scrape():
-    """抓取排行榜（优先读缓存）"""
+    """排行榜数据（只读缓存，不自动抓取）"""
     source = request.args.get("source", "fanqie")
     gender = request.args.get("gender") or None
     period = request.args.get("period") or None
     sort_key = request.args.get("sort", "rank")
     force = request.args.get("force", "0") == "1"
-    day = request.args.get("date") or today_str()
+    day = request.args.get("date") or None
 
     from_storage = False
 
-    # 优先读取已有数据
-    if not force and has_data(source, day):
-        data = load_data(source, day)
-        from_storage = True
-    else:
+    if force:
+        # 强制抓取
         data = _scrape_and_save(source, gender, period)
+        day = day or today_str()
+    else:
+        # 只读缓存，回退到最近有数据的日期
+        if day is None:
+            day = latest_date()
+        if has_data(source, day):
+            data = load_data(source, day)
+            from_storage = True
+        else:
+            return jsonify({
+                "code": 0,
+                "data": [],
+                "total": 0,
+                "from_storage": False,
+                "date": day,
+                "msg": "暂无数据，请先拉取",
+            })
 
     # 筛选
     if from_storage:
@@ -183,7 +197,7 @@ def api_scrape():
         if period:
             data = [d for d in data if d.get("period") == period]
 
-    # 排序（将 dict 转回 NovelRank 排序再转回）
+    # 排序
     if sort_key and sort_key != "rank":
         novels = [NovelRank(**{k: v for k, v in d.items() if k != "author_url"}) for d in data]
         novels = apply_sort(novels, sort_key)
@@ -200,35 +214,42 @@ def api_scrape():
 
 @app.route("/api/scrape/all-sources")
 def api_scrape_all_sources():
-    """汇总所有数据源（优先读取已有数据）"""
+    """汇总所有数据源（只读缓存，不自动抓取）"""
     gender = request.args.get("gender") or None
     period = request.args.get("period") or None
     sort_key = request.args.get("sort", "rank")
     force = request.args.get("force", "0") == "1"
-    day = request.args.get("date") or today_str()
+    day = request.args.get("date") or None
 
     all_data = []
     any_stored = False
 
-    for source_key, entry in SCRAPER_REGISTRY.items():
-        if not force and has_data(source_key, day):
-            data = load_data(source_key, day)
-            any_stored = True
-        else:
+    if force:
+        day = day or today_str()
+        for source_key, entry in SCRAPER_REGISTRY.items():
             try:
                 data = _scrape_and_save(source_key, gender, period)
+                all_data.extend(data)
             except Exception as e:
                 print(f"⚠ {entry['name']} 抓取失败: {e}")
+    else:
+        # 只读缓存
+        if day is None:
+            day = latest_date()
+        for source_key, entry in SCRAPER_REGISTRY.items():
+            if has_data(source_key, day):
+                data = load_data(source_key, day)
+                any_stored = True
+            else:
                 continue
 
-        # 筛选
-        if gender:
-            gender_name = {"male": "男频", "female": "女频"}.get(gender, gender)
-            data = [d for d in data if d.get("gender") == gender_name]
-        if period:
-            data = [d for d in data if d.get("period") == period]
-
-        all_data.extend(data)
+            # 筛选
+            if gender:
+                gender_name = {"male": "男频", "female": "女频"}.get(gender, gender)
+                data = [d for d in data if d.get("gender") == gender_name]
+            if period:
+                data = [d for d in data if d.get("period") == period]
+            all_data.extend(data)
 
     # 排序
     if sort_key and sort_key != "rank":
@@ -293,7 +314,7 @@ def api_fetch_all():
 @app.route("/api/dashboard")
 def api_dashboard():
     """市场分析汇总看板数据"""
-    day = request.args.get("date") or today_str()
+    day = request.args.get("date") or latest_date()
 
     # 收集所有数据源的数据
     all_novels = []
@@ -433,7 +454,7 @@ def api_category_books():
     import re
 
     category = request.args.get("category", "")
-    day = request.args.get("date") or today_str()
+    day = request.args.get("date") or latest_date()
     sort_by = request.args.get("sort", "heat")  # heat | rank
     limit = request.args.get("limit", type=int)  # 可选限制条数
 
@@ -501,7 +522,7 @@ def api_category_rank():
     import re
     from collections import defaultdict
 
-    day = request.args.get("date") or today_str()
+    day = request.args.get("date") or latest_date()
 
     def _parse_heat(extra):
         heat_str = extra.get("heat", "")
