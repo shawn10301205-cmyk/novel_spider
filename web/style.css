@@ -1362,8 +1362,16 @@ body {
     margin-top: 2px;
 }
 
-.heat-rank-cat {
-    color: var(--md-tertiary);
+.heat-rank-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--md-tertiary-container, #e8def8);
+    color: var(--md-on-tertiary-container, #4a148c);
+    margin-right: 6px;
+    vertical-align: middle;
 }
 
 .heat-rank-heat {
