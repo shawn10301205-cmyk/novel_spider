@@ -45,6 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadSources();
     loadCategories();
+
+    // 排序切换 - 立即客户端重排不重新请求
+    const sortSel = document.getElementById('sortSelect');
+    if (sortSel) {
+        sortSel.addEventListener('change', () => {
+            state.sort = sortSel.value;
+            if (state.results.length > 0) {
+                renderResults(state.results);
+            }
+        });
+    }
+
     // 自动加载看板
     checkAndLoadDashboard();
 });
@@ -600,6 +612,17 @@ function renderResults(data) {
     const container = document.getElementById('resultsContainer');
     if (!data || data.length === 0) { container.innerHTML = ''; return; }
 
+    // 按热度排序时，直接按热度值降序排列
+    if (state.sort === 'heat') {
+        const sorted = [...data].sort((a, b) => parseHeatValue(b) - parseHeatValue(a));
+        let html = '<div class="category-group fade-in"><div class="category-group-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><h3>按热度排序</h3><span class="badge">' + sorted.length + '本</span></div><div class="novel-list">';
+        let delay = 0;
+        for (const novel of sorted) { delay += 20; html += renderNovelCard(novel, delay); }
+        html += '</div></div>';
+        container.innerHTML = html;
+        return;
+    }
+
     // 按来源 -> 分类分组
     const bySource = {};
     for (const item of data) {
@@ -637,6 +660,20 @@ function renderResults(data) {
         }
     }
     container.innerHTML = html;
+}
+
+// 解析热度值为数字，用于排序
+function parseHeatValue(novel) {
+    const extra = novel.extra || {};
+    const heat = extra.heat || '';
+    if (!heat) return 0;
+    // 格式: "169.4万", "在读：3.2万", "在读：6388"
+    const cleaned = heat.replace(/^[^0-9.]*/, ''); // 去掉开头非数字
+    const match = cleaned.match(/([\d.]+)\s*(万)?/);
+    if (!match) return 0;
+    let val = parseFloat(match[1]) || 0;
+    if (match[2] === '万') val *= 10000;
+    return val;
 }
 
 function renderNovelCard(novel, delay) {
