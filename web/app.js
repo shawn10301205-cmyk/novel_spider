@@ -210,23 +210,19 @@ function renderHeatCol(containerId, books) {
         const titleLink = b.book_url
             ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
             : escapeHtml(b.title);
-        const metaParts = [];
-        if (b.heat) metaParts.push(`🔥 ${escapeHtml(b.heat)}`);
-        if (b.word_count) metaParts.push(`📝 ${escapeHtml(b.word_count)}`);
+        const heatText = [];
+        if (b.heat) heatText.push(`🔥 ${escapeHtml(b.heat)}`);
+        if (b.word_count) heatText.push(`📝 ${escapeHtml(b.word_count)}`);
 
         html += `<div class="heat-rank-item ${rankClass}" style="animation-delay:${idx * 30}ms">
             <span class="heat-rank-num">${idx + 1}</span>
             <div class="heat-rank-info">
                 <div class="heat-rank-title">${titleLink}</div>
-                <div class="heat-rank-meta">
-                    <span>${escapeHtml(b.author || '-')}</span>
-                </div>
-                ${metaParts.length ? `<div class="heat-rank-heat">${metaParts.join(' · ')}</div>` : ''}
+                <div class="heat-rank-meta">${escapeHtml(b.author || '-')}</div>
             </div>
-            <div class="heat-rank-tags">
-                ${b.category ? `<span class="heat-rank-tag">${escapeHtml(b.category)}</span>` : ''}
-                <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
-            </div>
+            <div class="heat-rank-heat">${heatText.join('<br>')}</div>
+            <span class="heat-rank-tag">${escapeHtml(b.category || '-')}</span>
+            <span class="tag tag-source heat-rank-source">${escapeHtml(b.source || '')}</span>
         </div>`;
     });
     el.innerHTML = html;
