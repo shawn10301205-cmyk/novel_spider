@@ -161,6 +161,11 @@ async function fetchAllData(force = false) {
         await loadSources();
         await loadDashboard();
         updateFetchStatus('数据已更新', `共 ${total} 条数据，${Object.keys(res.data || {}).length} 个平台`, true);
+
+        // 显示飞书群通知结果
+        if (res.notified) {
+            showToast('success', '已自动通知飞书群');
+        }
     } catch (e) {
         showToast('error', `获取失败: ${e.message}`);
         document.getElementById('dashEmpty').style.display = '';
@@ -750,6 +755,21 @@ async function pushFeishu() {
         showToast(res.code === 0 ? 'success' : 'error', res.msg || '操作完成');
     } catch (e) {
         showToast('error', `推送失败: ${e.message}`);
+    } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+async function notifyFeishuGroup() {
+    const btn = document.getElementById('btnNotifyFeishu');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    try {
+        const res = await api('/api/notify', { method: 'POST' });
+        showToast(res.code === 0 ? 'success' : 'error', res.msg || '操作完成');
+    } catch (e) {
+        showToast('error', `通知失败: ${e.message}`);
     } finally {
         btn.classList.remove('loading');
         btn.disabled = false;
