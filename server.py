@@ -59,6 +59,26 @@ def _run_scheduled_sync():
     }
     print(f"⏰ [{now}] 定时同步完成，共 {total} 条")
 
+    # 发送飞书群通知
+    try:
+        config = load_config()
+        feishu_cfg = config.get("feishu", {})
+        webhook_url = feishu_cfg.get("webhook_url", "")
+        app_url = feishu_cfg.get("app_url", "")
+        if webhook_url and total > 0:
+            notifier = FeishuWebhookNotifier(webhook_url, app_url)
+            day = today_str()
+            results = {}
+            for sk, ent in SCRAPER_REGISTRY.items():
+                if has_data(sk, day):
+                    data = load_data(sk, day)
+                    results[sk] = {"name": ent["name"], "count": len(data), "from_storage": False}
+                else:
+                    results[sk] = {"name": ent["name"], "count": 0, "from_storage": False}
+            notifier.send_scrape_report(results, total, day, errors)
+    except Exception as e:
+        print(f"  ⚠ 飞书通知发送失败: {e}")
+
     # 调度下一次
     _schedule_next()
 
