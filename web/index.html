@@ -260,6 +260,9 @@
                                 </svg>
                                 全部
                             </button>
+                            <button class="chip" id="chipCategoryRank" onclick="switchDataView('category')">
+                                📊 分类排行
+                            </button>
                             <button class="chip" data-value="male" onclick="selectChip(this, 'gender')">男频</button>
                             <button class="chip" data-value="female" onclick="selectChip(this, 'gender')">女频</button>
                         </div>
@@ -354,24 +357,6 @@
 
             <!-- 数据展示区（分类/热度共用） -->
             <section id="dataDisplaySection" style="display:none">
-                <div class="data-display-tabs glass-card">
-                    <button class="data-tab-btn active" id="tabBtnCategory" onclick="switchDataView('category')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                            <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                        📊 分类排行
-                    </button>
-                    <button class="data-tab-btn" id="tabBtnHeat" onclick="switchDataView('heat')" style="display:none">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                        🔥 热度排序 <span class="badge" id="heatCountBadge" style="display:none">0</span>
-                    </button>
-                </div>
 
                 <!-- 分类排行视图 -->
                 <div class="glass-card category-rank-inline" id="categoryRankInline">

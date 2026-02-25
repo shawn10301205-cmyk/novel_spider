@@ -629,6 +629,7 @@ async function loadCategoryRankInline() {
     const section = document.getElementById('categoryRankInline');
     const content = document.getElementById('categoryRankContent');
     const badge = document.getElementById('catRankBadge');
+    const statCat = document.getElementById('statCategories');
 
     section.style.display = 'block';
     content.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 计算中...</div>';
@@ -642,7 +643,8 @@ async function loadCategoryRankInline() {
             return;
         }
 
-        badge.textContent = categories.length;
+        if (badge) badge.textContent = categories.length;
+        if (statCat) statCat.textContent = categories.length;
         const maxHeat = categories[0].total_heat || 1;
 
         let html = '<div class="cat-rank-list">';
@@ -801,12 +803,7 @@ async function doScrape(force = false) {
         renderResults(state.results);
         showRankSection('results');
 
-        // 显示热度 Tab 并切换到热度视图
-        const heatBtn = document.getElementById('tabBtnHeat');
-        const heatBadge = document.getElementById('heatCountBadge');
-        heatBtn.style.display = '';
-        heatBadge.style.display = '';
-        heatBadge.textContent = state.results.length;
+        // 切换到热度视图
         switchDataView('heat');
         loadCategoryRankInline();
 
@@ -1164,19 +1161,16 @@ function showRankSection(name) {
 function switchDataView(view) {
     const catView = document.getElementById('categoryRankInline');
     const heatView = document.getElementById('resultsSection');
-    const catBtn = document.getElementById('tabBtnCategory');
-    const heatBtn = document.getElementById('tabBtnHeat');
+    const catChip = document.getElementById('chipCategoryRank');
 
     if (view === 'category') {
         catView.style.display = '';
         heatView.style.display = 'none';
-        catBtn.classList.add('active');
-        heatBtn.classList.remove('active');
+        if (catChip) catChip.classList.add('active');
     } else {
         catView.style.display = 'none';
         heatView.style.display = '';
-        catBtn.classList.remove('active');
-        heatBtn.classList.add('active');
+        if (catChip) catChip.classList.remove('active');
     }
 }
 
