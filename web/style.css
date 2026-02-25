@@ -2307,6 +2307,18 @@ body {
     color: var(--md-on-surface-variant);
 }
 
+.trend-action-bar {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.btn-sm {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
 .trend-no-data svg {
     margin-bottom: var(--space-md);
     opacity: 0.5;

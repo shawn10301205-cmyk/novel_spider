@@ -188,7 +188,7 @@ def get_novel_trend(title: str, source: Optional[str] = None, limit: int = 30) -
 
     if source:
         rows = conn.execute("""
-            SELECT date, source, source_name, rank, heat, heat_value, category, gender, period, raw_json
+            SELECT date, source, source_name, rank, heat, heat_value, category, gender, period, book_url, raw_json
             FROM novel_ranks
             WHERE title=? AND source=?
             ORDER BY date DESC
@@ -196,7 +196,7 @@ def get_novel_trend(title: str, source: Optional[str] = None, limit: int = 30) -
         """, (title, source, limit)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT date, source, source_name, rank, heat, heat_value, category, gender, period, raw_json
+            SELECT date, source, source_name, rank, heat, heat_value, category, gender, period, book_url, raw_json
             FROM novel_ranks
             WHERE title=?
             ORDER BY date DESC
@@ -216,6 +216,7 @@ def get_novel_trend(title: str, source: Optional[str] = None, limit: int = 30) -
             "category": row["category"],
             "gender": row["gender"],
             "period": row["period"],
+            "book_url": row["book_url"] or "",
         })
 
     return result

@@ -661,12 +661,11 @@ async function loadCategoryRankInline() {
                 booksHtml = '<div class="cat-rank-books" style="display:none">';
                 cat.top10.forEach((b, bi) => {
                     const heatVal = b.heat || '';
-                    const titleLink = b.book_url
-                        ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
-                        : escapeHtml(b.title);
-                    booksHtml += `<div class="cat-rank-book-item">
+                    const safeTitle = escapeHtml(b.title).replace(/'/g, "\\'");
+                    const safeSource = escapeHtml(b.source || '').replace(/'/g, "\\'");
+                    booksHtml += `<div class="cat-rank-book-item" style="cursor:pointer" onclick="openNovelTrend('${safeTitle}', '${safeSource}')">
                         <span class="cat-rank-book-idx">${bi + 1}</span>
-                        <span class="cat-rank-book-title">${titleLink}</span>
+                        <span class="cat-rank-book-title">${escapeHtml(b.title)}</span>
                         <span class="cat-rank-book-author">${escapeHtml(b.author || '')}</span>
                         <span class="cat-rank-book-heat">${heatVal ? '🔥' + escapeHtml(heatVal) : ''}</span>
                         <span class="tag tag-source" style="font-size:0.65rem">${escapeHtml(b.source || '')}</span>
@@ -1210,6 +1209,10 @@ async function openNovelTrend(title, sourceName) {
     const modalTitle = document.getElementById('trendModalTitle');
     const body = document.getElementById('trendModalBody');
 
+    // 保存当前打开的小说信息
+    window._trendNovelTitle = title;
+    window._trendNovelSource = sourceName;
+
     modalTitle.textContent = `${title} · 热度趋势`;
     body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 加载中...</div>';
     modal.style.display = 'flex';
@@ -1249,6 +1252,18 @@ async function openNovelTrend(title, sourceName) {
         }
         html += `<div class="trend-summary-item"><span class="trend-summary-label">分类</span><span class="trend-summary-value">${escapeHtml(latestHeat.category || '-')}</span></div>`;
         html += `</div>`;
+
+        // 查找书籍链接（从最新数据中取）
+        let bookUrl = '';
+        for (const d of data) {
+            // 尝试从 raw 数据获取 book_url
+            if (d.book_url) { bookUrl = d.book_url; break; }
+        }
+
+        // 查看书本按钮
+        if (bookUrl) {
+            html = `<div class="trend-action-bar"><a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">📖 查看书本</a></div>` + html;
+        }
 
         // 图表容器
         html += `<div class="trend-chart-wrap"><canvas id="trendCanvas" width="660" height="280"></canvas></div>`;
