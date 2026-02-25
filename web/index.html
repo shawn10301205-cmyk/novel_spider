@@ -352,25 +352,37 @@
                 <p class="loading-message" id="loadingMsg">正在加载数据...</p>
             </section>
 
-            <!-- 结果列表 -->
-            <section class="results-section" id="resultsSection" style="display:none">
-                <div id="resultsContainer"></div>
-            </section>
-
-            <!-- 分类热度排行（内联） -->
-            <section class="glass-card category-rank-inline" id="categoryRankInline" style="display:none">
-                <div class="chart-card-header">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                    <h3>📊 分类热度排行</h3>
-                    <span class="badge" id="catRankBadge">0</span>
+            <!-- 数据展示区（分类/热度共用） -->
+            <section id="dataDisplaySection" style="display:none">
+                <div class="data-display-tabs glass-card">
+                    <button class="data-tab-btn active" id="tabBtnCategory" onclick="switchDataView('category')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                        📊 分类排行
+                    </button>
+                    <button class="data-tab-btn" id="tabBtnHeat" onclick="switchDataView('heat')" style="display:none">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2c.5 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        🔥 热度排序 <span class="badge" id="heatCountBadge" style="display:none">0</span>
+                    </button>
                 </div>
-                <p class="cat-rank-desc">按各分类在读 Top10 热度累加排序，点击展开查看具体书籍</p>
-                <div id="categoryRankContent"></div>
+
+                <!-- 分类排行视图 -->
+                <div class="glass-card category-rank-inline" id="categoryRankInline">
+                    <p class="cat-rank-desc">按各分类在读 Top10 热度累加排序，点击展开查看具体书籍</p>
+                    <div id="categoryRankContent"></div>
+                </div>
+
+                <!-- 热度排序视图 -->
+                <div id="resultsSection" style="display:none">
+                    <div id="resultsContainer"></div>
+                </div>
             </section>
 
             <!-- 空状态 -->

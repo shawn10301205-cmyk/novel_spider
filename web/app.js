@@ -105,9 +105,15 @@ function switchTab(tab) {
     document.getElementById('tabDashboard').style.display = tab === 'dashboard' ? '' : 'none';
     document.getElementById('tabRank').style.display = tab === 'rank' ? '' : 'none';
 
-    // 排行榜默认自动加载全部数据
-    if (tab === 'rank' && state.results.length === 0) {
-        doScrape();
+    if (tab === 'rank') {
+        // 显示数据展示区 + 加载分类
+        document.getElementById('dataDisplaySection').style.display = '';
+        document.getElementById('emptyState').style.display = 'none';
+        loadCategoryRankInline();
+        // 如果没有热度数据，默认显示分类
+        if (state.results.length === 0) {
+            switchDataView('category');
+        }
     }
 }
 
@@ -794,6 +800,14 @@ async function doScrape(force = false) {
         updateStats(state.results.length, state.date || elapsed);
         renderResults(state.results);
         showRankSection('results');
+
+        // 显示热度 Tab 并切换到热度视图
+        const heatBtn = document.getElementById('tabBtnHeat');
+        const heatBadge = document.getElementById('heatCountBadge');
+        heatBtn.style.display = '';
+        heatBadge.style.display = '';
+        heatBadge.textContent = state.results.length;
+        switchDataView('heat');
         loadCategoryRankInline();
 
         const msg = state.cached
@@ -1141,10 +1155,29 @@ function renderNovelCard(novel, delay, globalRank) {
 // 辅助
 // ============================================================
 function showRankSection(name) {
-    const sections = { loading: 'loadingSection', results: 'resultsSection', empty: 'emptyState' };
+    const sections = { loading: 'loadingSection', results: 'dataDisplaySection', empty: 'emptyState' };
     document.getElementById('statsBar').style.display = name === 'results' ? '' : 'none';
     for (const [key, id] of Object.entries(sections))
         document.getElementById(id).style.display = key === name ? '' : 'none';
+}
+
+function switchDataView(view) {
+    const catView = document.getElementById('categoryRankInline');
+    const heatView = document.getElementById('resultsSection');
+    const catBtn = document.getElementById('tabBtnCategory');
+    const heatBtn = document.getElementById('tabBtnHeat');
+
+    if (view === 'category') {
+        catView.style.display = '';
+        heatView.style.display = 'none';
+        catBtn.classList.add('active');
+        heatBtn.classList.remove('active');
+    } else {
+        catView.style.display = 'none';
+        heatView.style.display = '';
+        catBtn.classList.remove('active');
+        heatBtn.classList.add('active');
+    }
 }
 
 function updateStats(total, date) {

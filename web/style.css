@@ -2198,13 +2198,54 @@ body {
    ============================================================ */
 .category-rank-inline {
     padding: var(--space-lg);
-    margin-top: var(--space-lg);
+    margin-top: var(--space-md);
 }
 
 .cat-rank-desc {
     font-size: 0.85rem;
     color: var(--md-on-surface-variant);
     margin-bottom: var(--space-md);
+}
+
+.data-display-tabs {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    margin-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.data-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: var(--radius-xl);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--md-on-surface-variant);
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+}
+
+.data-tab-btn:hover {
+    background: var(--md-surface-variant);
+}
+
+.data-tab-btn.active {
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+    box-shadow: 0 2px 8px rgba(103, 80, 164, 0.25);
+}
+
+.data-tab-btn .badge {
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.72rem;
 }
 
 /* ============================================================
