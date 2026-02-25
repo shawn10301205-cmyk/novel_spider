@@ -3,6 +3,8 @@ feishu:
   app_secret: ''
   app_token: ''
   table_id: ''
+  webhook_url: "REDACTED_WEBHOOK_URL"
+  app_url: "REDACTED_APP_URL"   # 飞书应用链接，点击在飞书内打开
 schedule:
   enabled: true
   sync_time: 08:30

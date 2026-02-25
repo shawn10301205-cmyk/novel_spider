@@ -16,6 +16,7 @@ import yaml
 from scrapers import SCRAPER_REGISTRY
 from sorter import apply_sort
 from exporters.feishu import FeishuExporter
+from exporters.webhook import FeishuWebhookNotifier
 from storage import has_data, load_data, save_data, list_dates, today_str, latest_date, get_novel_trend, init_db
 from models.novel import NovelRank
 
@@ -57,6 +58,26 @@ def _run_scheduled_sync():
         "errors": errors,
     }
     print(f"⏰ [{now}] 定时同步完成，共 {total} 条")
+
+    # 发送飞书群通知
+    try:
+        config = load_config()
+        feishu_cfg = config.get("feishu", {})
+        webhook_url = feishu_cfg.get("webhook_url", "")
+        app_url = feishu_cfg.get("app_url", "")
+        if webhook_url and total > 0:
+            notifier = FeishuWebhookNotifier(webhook_url, app_url)
+            day = today_str()
+            results = {}
+            for sk, ent in SCRAPER_REGISTRY.items():
+                if has_data(sk, day):
+                    data = load_data(sk, day)
+                    results[sk] = {"name": ent["name"], "count": len(data), "from_storage": False}
+                else:
+                    results[sk] = {"name": ent["name"], "count": 0, "from_storage": False}
+            notifier.send_scrape_report(results, total, day, errors)
+    except Exception as e:
+        print(f"  ⚠ 飞书通知发送失败: {e}")
 
     # 调度下一次
     _schedule_next()
@@ -302,12 +323,25 @@ def api_fetch_all():
 
     total = sum(r["count"] for r in results.values())
 
+    # 自动发送飞书群通知
+    notify = request.args.get("notify", "1") != "0"
+    notified = False
+    if notify and total > 0:
+        config = load_config()
+        feishu_cfg = config.get("feishu", {})
+        webhook_url = feishu_cfg.get("webhook_url", "")
+        app_url = feishu_cfg.get("app_url", "")
+        if webhook_url:
+            notifier = FeishuWebhookNotifier(webhook_url, app_url)
+            notified = notifier.send_scrape_report(results, total, day, errors)
+
     return jsonify({
         "code": 0,
         "data": results,
         "total": total,
         "date": day,
         "errors": errors,
+        "notified": notified,
     })
 
 
@@ -691,6 +725,37 @@ def api_settings_save():
             "enabled": enabled,
         },
     })
+
+
+@app.route("/api/notify", methods=["POST"])
+def api_notify():
+    """手动发送飞书群通知"""
+    config = load_config()
+    feishu_cfg = config.get("feishu", {})
+    webhook_url = feishu_cfg.get("webhook_url", "")
+    app_url = feishu_cfg.get("app_url", "")
+
+    if not webhook_url:
+        return jsonify({"code": 1, "msg": "Webhook URL 未配置"})
+
+    notifier = FeishuWebhookNotifier(webhook_url, app_url)
+
+    day = today_str()
+    results = {}
+    for source_key, entry in SCRAPER_REGISTRY.items():
+        if has_data(source_key, day):
+            data = load_data(source_key, day)
+            results[source_key] = {"name": entry["name"], "count": len(data), "from_storage": True}
+        else:
+            results[source_key] = {"name": entry["name"], "count": 0, "from_storage": False}
+
+    total = sum(r["count"] for r in results.values())
+    ok = notifier.send_scrape_report(results, total, day)
+
+    if ok:
+        return jsonify({"code": 0, "msg": "通知发送成功"})
+    else:
+        return jsonify({"code": 1, "msg": "通知发送失败"})
 
 
 if __name__ == "__main__":
