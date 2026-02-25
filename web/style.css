@@ -680,7 +680,7 @@ body {
     grid-template-columns: 48px 1fr auto;
     gap: var(--space-md);
     align-items: center;
-    cursor: default;
+    cursor: pointer;
     transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
 
@@ -2191,4 +2191,118 @@ body {
     .btn {
         justify-content: center;
     }
+}
+
+/* ============================================================
+   热度趋势弹窗
+   ============================================================ */
+.trend-chart-wrap {
+    width: 100%;
+    padding: var(--space-md) 0;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+}
+
+.trend-chart-wrap canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+}
+
+.trend-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-md);
+    font-size: 0.85rem;
+}
+
+.trend-data-table th,
+.trend-data-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.trend-data-table th {
+    font-weight: 600;
+    color: var(--md-on-surface-variant);
+    background: var(--md-surface-variant);
+    position: sticky;
+    top: 0;
+}
+
+.trend-data-table tr:hover td {
+    background: var(--md-surface-variant);
+}
+
+.trend-data-table .heat-cell {
+    color: var(--md-tertiary);
+    font-weight: 500;
+}
+
+.trend-data-table .rank-cell {
+    font-weight: 700;
+    color: var(--md-primary);
+}
+
+.trend-no-data {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--md-on-surface-variant);
+}
+
+.trend-no-data svg {
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+}
+
+.trend-summary {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+    background: var(--md-primary-container);
+    border-radius: var(--radius-md);
+}
+
+.trend-summary-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 80px;
+}
+
+.trend-summary-label {
+    font-size: 0.72rem;
+    color: var(--md-on-surface-variant);
+}
+
+.trend-summary-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--md-on-primary-container);
+}
+
+/* 小说卡片可点击 */
+.novel-card.clickable {
+    cursor: pointer;
+}
+
+.novel-card.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(103, 80, 164, 0.15);
+    border-color: var(--md-primary);
+}
+
+.novel-card .trend-hint {
+    font-size: 0.7rem;
+    color: var(--md-outline);
+    margin-top: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.novel-card.clickable:hover .trend-hint {
+    opacity: 1;
 }

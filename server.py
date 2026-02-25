@@ -16,7 +16,7 @@ import yaml
 from scrapers import SCRAPER_REGISTRY
 from sorter import apply_sort
 from exporters.feishu import FeishuExporter
-from storage import has_data, load_data, save_data, list_dates, today_str, latest_date
+from storage import has_data, load_data, save_data, list_dates, today_str, latest_date, get_novel_trend, init_db
 from models.novel import NovelRank
 
 app = Flask(__name__, static_folder="web", static_url_path="")
@@ -586,6 +586,25 @@ def api_category_rank():
     })
 
 
+@app.route("/api/novel/trend")
+def api_novel_trend():
+    """查询某本小说历史热度趋势"""
+    title = request.args.get("title", "").strip()
+    source = request.args.get("source") or None
+    limit = request.args.get("limit", 30, type=int)
+
+    if not title:
+        return jsonify({"code": 1, "msg": "缺少 title 参数"})
+
+    data = get_novel_trend(title, source=source, limit=limit)
+    return jsonify({
+        "code": 0,
+        "data": data,
+        "title": title,
+        "total": len(data),
+    })
+
+
 @app.route("/api/feishu/push", methods=["POST"])
 def api_feishu_push():
     """推送到飞书"""
@@ -675,6 +694,7 @@ def api_settings_save():
 
 
 if __name__ == "__main__":
-    # 启动时自动调度
+    # 初始化数据库 & 启动时自动调度
+    init_db()
     _schedule_next()
     app.run(host="0.0.0.0", port=8081, debug=True)

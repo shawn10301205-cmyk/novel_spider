@@ -442,6 +442,34 @@
         </div>
     </div>
 
+    <!-- 热度趋势弹窗 -->
+    <div class="modal-overlay" id="trendModal" style="display:none" onclick="if(event.target===this)closeTrendModal()">
+        <div class="modal-content glass-card" style="max-width:720px">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M23 6l-9.5 9.5-5-5L1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M17 6h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <h2 id="trendModalTitle">热度趋势</h2>
+                </div>
+                <button class="icon-btn" onclick="closeTrendModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="trendModalBody">
+                <div class="trend-chart-wrap">
+                    <canvas id="trendCanvas" width="660" height="280"></canvas>
+                </div>
+                <div id="trendDataTable"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 提示 -->
     <div class="toast-container" id="toastContainer"></div>
 

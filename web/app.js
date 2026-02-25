@@ -1015,7 +1015,7 @@ function renderNovelCard(novel, delay, globalRank) {
     const genderClass = novel.gender === '男频' ? 'tag-gender-male' : 'tag-gender-female';
     const bookUrl = novel.book_url || '#';
     const titleLink = bookUrl !== '#'
-        ? `<a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener">${escapeHtml(novel.title)}</a>`
+        ? `<a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(novel.title)}</a>`
         : escapeHtml(novel.title);
 
     const extra = novel.extra || {};
@@ -1032,8 +1032,11 @@ function renderNovelCard(novel, delay, globalRank) {
     if (extra.status) subParts.push(escapeHtml(extra.status));
     const subHtml = subParts.length > 0 ? `<span class="novel-extra-sub">${subParts.join(' · ')}</span>` : '';
 
+    const safeTitle = escapeHtml(novel.title).replace(/'/g, "\\'");
+    const safeSource = escapeHtml(novel.source || '').replace(/'/g, "\\'");
+
     return `
-    <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms">
+    <div class="novel-card glass-card stagger-in" style="animation-delay: ${delay}ms" onclick="openNovelTrend('${safeTitle}', '${safeSource}')">
         <div class="rank-badge ${rankClass}">${displayRank}</div>
         <div class="novel-info">
             <div class="novel-title">${titleLink}</div>
@@ -1049,6 +1052,7 @@ function renderNovelCard(novel, delay, globalRank) {
                 ${subHtml}
             </div>
             ${heatHtml}
+            <div class="trend-hint">📈 点击查看热度趋势</div>
         </div>
         <div class="novel-tags">
             <span class="tag ${genderClass}">${escapeHtml(novel.gender || '-')}</span>
@@ -1093,4 +1097,219 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// ============================================================
+// 热度趋势弹窗
+// ============================================================
+async function openNovelTrend(title, sourceName) {
+    const modal = document.getElementById('trendModal');
+    const modalTitle = document.getElementById('trendModalTitle');
+    const body = document.getElementById('trendModalBody');
+
+    modalTitle.textContent = `${title} · 热度趋势`;
+    body.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 加载中...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await api(`/api/novel/trend?title=${encodeURIComponent(title)}&limit=30`);
+        const data = res.data || [];
+
+        if (data.length === 0) {
+            body.innerHTML = `<div class="trend-no-data">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M23 6l-9.5 9.5-5-5L1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <p>暂无历史数据，请先拉取数据</p>
+            </div>`;
+            return;
+        }
+
+        // 按日期正序
+        const sorted = [...data].reverse();
+
+        // 汇总信息
+        const latestHeat = sorted[sorted.length - 1];
+        const firstHeat = sorted[0];
+        const maxHeatValue = Math.max(...sorted.map(d => d.heat_value));
+        const minHeatValue = Math.min(...sorted.filter(d => d.heat_value > 0).map(d => d.heat_value));
+
+        const formatHeat = (v) => v >= 10000 ? (v / 10000).toFixed(1) + '万' : Math.round(v).toLocaleString();
+
+        let html = `<div class="trend-summary">`;
+        html += `<div class="trend-summary-item"><span class="trend-summary-label">最新热度</span><span class="trend-summary-value">🔥 ${escapeHtml(latestHeat.heat || '-')}</span></div>`;
+        html += `<div class="trend-summary-item"><span class="trend-summary-label">数据天数</span><span class="trend-summary-value">${sorted.length} 天</span></div>`;
+        html += `<div class="trend-summary-item"><span class="trend-summary-label">最高热度</span><span class="trend-summary-value">${formatHeat(maxHeatValue)}</span></div>`;
+        if (sorted.length > 1) {
+            const diff = latestHeat.heat_value - firstHeat.heat_value;
+            const arrow = diff >= 0 ? '↑' : '↓';
+            const color = diff >= 0 ? '#22C55E' : '#EF4444';
+            html += `<div class="trend-summary-item"><span class="trend-summary-label">变化</span><span class="trend-summary-value" style="color:${color}">${arrow} ${formatHeat(Math.abs(diff))}</span></div>`;
+        }
+        html += `<div class="trend-summary-item"><span class="trend-summary-label">分类</span><span class="trend-summary-value">${escapeHtml(latestHeat.category || '-')}</span></div>`;
+        html += `</div>`;
+
+        // 图表容器
+        html += `<div class="trend-chart-wrap"><canvas id="trendCanvas" width="660" height="280"></canvas></div>`;
+
+        // 数据表格
+        html += `<div style="max-height:240px;overflow-y:auto">`;
+        html += `<table class="trend-data-table"><thead><tr><th>日期</th><th>热度</th><th>排名</th><th>平台</th><th>频道</th></tr></thead><tbody>`;
+        for (const d of [...sorted].reverse()) {
+            html += `<tr>
+                <td>${escapeHtml(d.date)}</td>
+                <td class="heat-cell">${escapeHtml(d.heat || '-')}</td>
+                <td class="rank-cell">#${d.rank}</td>
+                <td>${escapeHtml(d.source_name || d.source)}</td>
+                <td>${escapeHtml(d.gender || '-')}</td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>`;
+
+        body.innerHTML = html;
+
+        // 绘制图表
+        requestAnimationFrame(() => drawTrendChart(sorted));
+    } catch (e) {
+        body.innerHTML = `<div class="trend-no-data">加载失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function closeTrendModal() {
+    document.getElementById('trendModal').style.display = 'none';
+}
+
+function drawTrendChart(data) {
+    const canvas = document.getElementById('trendCanvas');
+    if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = 660;
+    const displayHeight = 280;
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#CAC4D0' : '#49454F';
+    const gridColor = isDark ? 'rgba(202,196,208,0.15)' : 'rgba(0,0,0,0.06)';
+    const lineColor = '#6750A4';
+    const fillColor = isDark ? 'rgba(208,188,255,0.15)' : 'rgba(103,80,164,0.1)';
+    const dotColor = '#6750A4';
+    const dotHoverColor = '#D0BCFF';
+
+    // 边距
+    const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+    const w = displayWidth - pad.left - pad.right;
+    const h = displayHeight - pad.top - pad.bottom;
+
+    const values = data.map(d => d.heat_value);
+    const maxVal = Math.max(...values) * 1.1 || 1;
+    const minVal = Math.min(...values.filter(v => v > 0)) * 0.9;
+    const range = maxVal - minVal || 1;
+
+    // 清空
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+    // 网格线
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    const gridLines = 5;
+    for (let i = 0; i <= gridLines; i++) {
+        const y = pad.top + (h / gridLines) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + w, y);
+        ctx.stroke();
+
+        // Y轴标签
+        const val = maxVal - (range / gridLines) * i;
+        ctx.fillStyle = textColor;
+        ctx.font = '11px "Noto Sans SC", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const label = val >= 10000 ? (val / 10000).toFixed(1) + '万' : Math.round(val).toString();
+        ctx.fillText(label, pad.left - 8, y);
+    }
+
+    if (data.length < 2) {
+        // 只有1天数据，画单点
+        const x = pad.left + w / 2;
+        const y = pad.top + h / 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+
+        ctx.fillStyle = textColor;
+        ctx.font = '12px "Noto Sans SC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(data[0].date, x, displayHeight - 10);
+        return;
+    }
+
+    // 计算坐标点
+    const points = data.map((d, i) => ({
+        x: pad.left + (w / (data.length - 1)) * i,
+        y: pad.top + h - ((d.heat_value - minVal) / range) * h,
+        label: d.date,
+        heat: d.heat,
+        value: d.heat_value,
+    }));
+
+    // 填充区域
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cpx = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+    }
+    ctx.lineTo(points[points.length - 1].x, pad.top + h);
+    ctx.lineTo(points[0].x, pad.top + h);
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+
+    // 线条
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cpx = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+    }
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 数据点
+    for (const p of points) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.strokeStyle = dotColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // X轴日期标签（显示部分）
+    ctx.fillStyle = textColor;
+    ctx.font = '10px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    const step = Math.max(1, Math.floor(points.length / 8));
+    for (let i = 0; i < points.length; i += step) {
+        const dateStr = points[i].label.slice(5); // MM-DD
+        ctx.fillText(dateStr, points[i].x, displayHeight - 10);
+    }
+    // 始终显示最后一天
+    if ((points.length - 1) % step !== 0) {
+        const last = points[points.length - 1];
+        ctx.fillText(last.label.slice(5), last.x, displayHeight - 10);
+    }
 }
