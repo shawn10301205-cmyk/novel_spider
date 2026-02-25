@@ -319,8 +319,9 @@
                     <div class="stat-info"><span class="stat-value" id="statTotal">0</span><span
                             class="stat-label">总书籍</span></div>
                 </div>
-                <div class="stat-card glass-card" style="cursor:pointer" onclick="openCategoryRankModal()"
-                    title="点击查看分类热度排行">
+                <div class="stat-card glass-card" style="cursor:pointer"
+                    onclick="document.getElementById('categoryRankInline').scrollIntoView({behavior:'smooth'})"
+                    title="跳转到分类热度排行">
                     <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
@@ -328,7 +329,7 @@
                             <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
                         </svg></div>
                     <div class="stat-info"><span class="stat-value" id="statCategories">0</span><span
-                            class="stat-label">分类数 →</span></div>
+                            class="stat-label">分类数 ↓</span></div>
                 </div>
                 <div class="stat-card glass-card">
                     <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -354,6 +355,22 @@
             <!-- 结果列表 -->
             <section class="results-section" id="resultsSection" style="display:none">
                 <div id="resultsContainer"></div>
+            </section>
+
+            <!-- 分类热度排行（内联） -->
+            <section class="glass-card category-rank-inline" id="categoryRankInline" style="display:none">
+                <div class="chart-card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <h3>📊 分类热度排行</h3>
+                    <span class="badge" id="catRankBadge">0</span>
+                </div>
+                <p class="cat-rank-desc">按各分类在读 Top10 热度累加排序，点击展开查看具体书籍</p>
+                <div id="categoryRankContent"></div>
             </section>
 
             <!-- 空状态 -->

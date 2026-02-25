@@ -618,6 +618,81 @@ async function openCategoryRankModal() {
     }
 }
 
+// 分类排行 — 内联加载到页面
+async function loadCategoryRankInline() {
+    const section = document.getElementById('categoryRankInline');
+    const content = document.getElementById('categoryRankContent');
+    const badge = document.getElementById('catRankBadge');
+
+    section.style.display = 'block';
+    content.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 计算中...</div>';
+
+    try {
+        const res = await api('/api/category-rank');
+        const categories = res.data || [];
+
+        if (categories.length === 0) {
+            content.innerHTML = '<div class="modal-empty">暂无数据</div>';
+            return;
+        }
+
+        badge.textContent = categories.length;
+        const maxHeat = categories[0].total_heat || 1;
+
+        let html = '<div class="cat-rank-list">';
+
+        categories.forEach((cat, idx) => {
+            const pct = (cat.total_heat / maxHeat * 100).toFixed(1);
+            const rankClass = idx < 3 ? `cat-rank-top cat-rank-${idx + 1}` : '';
+            const heatDisplay = cat.total_heat >= 10000
+                ? (cat.total_heat / 10000).toFixed(1) + '万'
+                : Math.round(cat.total_heat).toLocaleString();
+
+            let booksHtml = '';
+            if (cat.top10 && cat.top10.length > 0) {
+                booksHtml = '<div class="cat-rank-books" style="display:none">';
+                cat.top10.forEach((b, bi) => {
+                    const heatVal = b.heat || '';
+                    const titleLink = b.book_url
+                        ? `<a href="${escapeHtml(b.book_url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
+                        : escapeHtml(b.title);
+                    booksHtml += `<div class="cat-rank-book-item">
+                        <span class="cat-rank-book-idx">${bi + 1}</span>
+                        <span class="cat-rank-book-title">${titleLink}</span>
+                        <span class="cat-rank-book-author">${escapeHtml(b.author || '')}</span>
+                        <span class="cat-rank-book-heat">${heatVal ? '🔥' + escapeHtml(heatVal) : ''}</span>
+                        <span class="tag tag-source" style="font-size:0.65rem">${escapeHtml(b.source || '')}</span>
+                    </div>`;
+                });
+                booksHtml += '</div>';
+            }
+
+            html += `<div class="cat-rank-item ${rankClass} stagger-in" style="animation-delay:${idx * 30}ms">
+                <div class="cat-rank-header" onclick="toggleCatBooks(this)">
+                    <span class="cat-rank-num">${idx + 1}</span>
+                    <div class="cat-rank-info">
+                        <div class="cat-rank-name">${escapeHtml(cat.category)}</div>
+                        <div class="cat-rank-bar-track">
+                            <div class="cat-rank-bar-fill" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                    <div class="cat-rank-meta">
+                        <span class="cat-rank-heat">🔥 ${heatDisplay}</span>
+                        <span class="cat-rank-count">${cat.book_count}本</span>
+                    </div>
+                    <span class="cat-rank-expand">▸</span>
+                </div>
+                ${booksHtml}
+            </div>`;
+        });
+
+        html += '</div>';
+        content.innerHTML = html;
+    } catch (e) {
+        content.innerHTML = `<div class="modal-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
 // 展开/收起分类下的书籍列表
 function toggleCatBooks(headerEl) {
     const item = headerEl.closest('.cat-rank-item');
@@ -719,6 +794,7 @@ async function doScrape(force = false) {
         updateStats(state.results.length, state.date || elapsed);
         renderResults(state.results);
         showRankSection('results');
+        loadCategoryRankInline();
 
         const msg = state.cached
             ? `已加载 ${state.results.length} 条缓存数据（${state.date}）`
