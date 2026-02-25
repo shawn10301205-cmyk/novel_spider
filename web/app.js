@@ -660,6 +660,7 @@ async function loadCategoryRankInline() {
             if (cat.top10 && cat.top10.length > 0) {
                 booksHtml = '<div class="cat-rank-books" style="display:none">';
                 cat.top10.forEach((b, bi) => {
+                    if (!b.title) return; // 跳过空标题
                     const heatVal = b.heat || '';
                     const safeTitle = escapeHtml(b.title).replace(/'/g, "\\'");
                     const safeSource = escapeHtml(b.source || '').replace(/'/g, "\\'");
