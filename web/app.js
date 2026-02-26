@@ -20,6 +20,7 @@ const state = {
     date: '',
     currentTab: 'dashboard',
     dashboard: null,
+    _cache: {},  // 浏览器端 API 缓存
 };
 
 // ============================================================
@@ -106,11 +107,10 @@ function switchTab(tab) {
     document.getElementById('tabRank').style.display = tab === 'rank' ? '' : 'none';
 
     if (tab === 'rank') {
-        // 显示数据展示区 + 加载分类
         document.getElementById('dataDisplaySection').style.display = '';
         document.getElementById('emptyState').style.display = 'none';
+        // 有缓存直接渲染，不重新请求
         loadCategoryRankInline();
-        // 如果没有热度数据，默认显示分类
         if (state.results.length === 0) {
             switchDataView('category');
         }
@@ -629,14 +629,19 @@ async function openCategoryRankModal() {
     }
 }
 
-// 分类排行 — 内联加载到页面
+// 分类排行 — 内联加载到页面（带缓存）
 async function loadCategoryRankInline() {
     const section = document.getElementById('categoryRankInline');
     const content = document.getElementById('categoryRankContent');
-    const badge = document.getElementById('catRankBadge');
-    const statCat = document.getElementById('statCategories');
 
     section.style.display = 'block';
+
+    // 有缓存直接渲染，不重新请求
+    if (state._cache.categoryRank) {
+        _renderCategoryRank(state._cache.categoryRank);
+        return;
+    }
+
     content.innerHTML = '<div class="modal-loading"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" class="spin"><path d="M21 12a9 9 0 1 1-6.22-8.56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> 计算中...</div>';
 
     try {
@@ -648,62 +653,72 @@ async function loadCategoryRankInline() {
             return;
         }
 
-        if (badge) badge.textContent = categories.length;
-        if (statCat) statCat.textContent = categories.length;
-        const maxHeat = categories[0].total_heat || 1;
-
-        let html = '<div class="cat-rank-list">';
-
-        categories.forEach((cat, idx) => {
-            const pct = (cat.total_heat / maxHeat * 100).toFixed(1);
-            const rankClass = idx < 3 ? `cat-rank-top cat-rank-${idx + 1}` : '';
-            const heatDisplay = cat.total_heat >= 10000
-                ? (cat.total_heat / 10000).toFixed(1) + '万'
-                : Math.round(cat.total_heat).toLocaleString();
-
-            let booksHtml = '';
-            if (cat.top10 && cat.top10.length > 0) {
-                booksHtml = '<div class="cat-rank-books" style="display:none">';
-                cat.top10.forEach((b, bi) => {
-                    if (!b.title) return; // 跳过空标题
-                    const heatVal = b.heat || '';
-                    const safeTitle = escapeHtml(b.title).replace(/'/g, "\\'");
-                    const safeSource = escapeHtml(b.source || '').replace(/'/g, "\\'");
-                    booksHtml += `<div class="cat-rank-book-item" style="cursor:pointer" onclick="openNovelTrend('${safeTitle}', '${safeSource}')">
-                        <span class="cat-rank-book-idx">${bi + 1}</span>
-                        <span class="cat-rank-book-title">${escapeHtml(b.title)}</span>
-                        <span class="cat-rank-book-author">${escapeHtml(b.author || '')}</span>
-                        <span class="cat-rank-book-heat">${heatVal ? '🔥' + escapeHtml(heatVal) : ''}</span>
-                        <span class="tag tag-source" style="font-size:0.65rem">${escapeHtml(b.source || '')}</span>
-                    </div>`;
-                });
-                booksHtml += '</div>';
-            }
-
-            html += `<div class="cat-rank-item ${rankClass} stagger-in" style="animation-delay:${idx * 30}ms">
-                <div class="cat-rank-header" onclick="toggleCatBooks(this)">
-                    <span class="cat-rank-num">${idx + 1}</span>
-                    <div class="cat-rank-info">
-                        <div class="cat-rank-name">${escapeHtml(cat.category)}</div>
-                        <div class="cat-rank-bar-track">
-                            <div class="cat-rank-bar-fill" style="width:${pct}%"></div>
-                        </div>
-                    </div>
-                    <div class="cat-rank-meta">
-                        <span class="cat-rank-heat">🔥 ${heatDisplay}</span>
-                        <span class="cat-rank-count">${cat.book_count}本</span>
-                    </div>
-                    <span class="cat-rank-expand">▸</span>
-                </div>
-                ${booksHtml}
-            </div>`;
-        });
-
-        html += '</div>';
-        content.innerHTML = html;
+        state._cache.categoryRank = categories;
+        _renderCategoryRank(categories);
     } catch (e) {
         content.innerHTML = `<div class="modal-empty">加载失败: ${escapeHtml(e.message)}</div>`;
     }
+}
+
+// 渲染分类排行列表
+function _renderCategoryRank(categories) {
+    const content = document.getElementById('categoryRankContent');
+    const badge = document.getElementById('catRankBadge');
+    const statCat = document.getElementById('statCategories');
+
+    if (badge) badge.textContent = categories.length;
+    if (statCat) statCat.textContent = categories.length;
+    const maxHeat = categories[0].total_heat || 1;
+
+    let html = '<div class="cat-rank-list">';
+
+    categories.forEach((cat, idx) => {
+        const pct = (cat.total_heat / maxHeat * 100).toFixed(1);
+        const rankClass = idx < 3 ? `cat-rank-top cat-rank-${idx + 1}` : '';
+        const heatDisplay = cat.total_heat >= 10000
+            ? (cat.total_heat / 10000).toFixed(1) + '万'
+            : Math.round(cat.total_heat).toLocaleString();
+
+        let booksHtml = '';
+        if (cat.top10 && cat.top10.length > 0) {
+            booksHtml = '<div class="cat-rank-books" style="display:none">';
+            cat.top10.forEach((b, bi) => {
+                if (!b.title) return; // 跳过空标题
+                const heatVal = b.heat || '';
+                const safeTitle = escapeHtml(b.title).replace(/'/g, "\\'");
+                const safeSource = escapeHtml(b.source || '').replace(/'/g, "\\'");
+                booksHtml += `<div class="cat-rank-book-item" style="cursor:pointer" onclick="openNovelTrend('${safeTitle}', '${safeSource}')">
+                    <span class="cat-rank-book-idx">${bi + 1}</span>
+                    <span class="cat-rank-book-title">${escapeHtml(b.title)}</span>
+                    <span class="cat-rank-book-author">${escapeHtml(b.author || '')}</span>
+                    <span class="cat-rank-book-heat">${heatVal ? '🔥' + escapeHtml(heatVal) : ''}</span>
+                    <span class="tag tag-source" style="font-size:0.65rem">${escapeHtml(b.source || '')}</span>
+                </div>`;
+            });
+            booksHtml += '</div>';
+        }
+
+        html += `<div class="cat-rank-item ${rankClass} stagger-in" style="animation-delay:${idx * 30}ms">
+            <div class="cat-rank-header" onclick="toggleCatBooks(this)">
+                <span class="cat-rank-num">${idx + 1}</span>
+                <div class="cat-rank-info">
+                    <div class="cat-rank-name">${escapeHtml(cat.category)}</div>
+                    <div class="cat-rank-bar-track">
+                        <div class="cat-rank-bar-fill" style="width:${pct}%"></div>
+                    </div>
+                </div>
+                <div class="cat-rank-meta">
+                    <span class="cat-rank-heat">🔥 ${heatDisplay}</span>
+                    <span class="cat-rank-count">${cat.book_count}本</span>
+                </div>
+                <span class="cat-rank-expand">▸</span>
+            </div>
+            ${booksHtml}
+        </div>`;
+    });
+
+    html += '</div>';
+    content.innerHTML = html;
 }
 
 // 展开/收起分类下的书籍列表
@@ -772,6 +787,7 @@ function renderCrossPlatform(crossPlatform) {
 async function doScrape(force = false) {
     if (state.loading) return;
     state.loading = true;
+    state._cache = {}; // 清除缓存，拉取新数据后重新计算
 
     const btn = document.getElementById('btnScrape');
     btn.classList.add('loading');
