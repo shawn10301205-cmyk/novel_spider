@@ -8,3 +8,5 @@ build/
 .vscode/
 .idea/
 data/
+.venv/
+config.local.yaml
