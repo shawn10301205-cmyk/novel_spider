@@ -130,7 +130,7 @@ def save_data(source: str, novels: list[NovelRank], day: Optional[str] = None):
     """, rows)
     conn.commit()
     conn.close()
-    print(f"  💾 已保存 {len(novels)} 条 -> SQLite ({source}, {day})")
+    print(f"  [save] {len(novels)} records -> SQLite ({source}, {day})")
 
 
 def load_data(source: str, day: Optional[str] = None) -> list[dict]:
@@ -147,7 +147,7 @@ def load_data(source: str, day: Optional[str] = None) -> list[dict]:
     for row in rows:
         result.append(json.loads(row["raw_json"]))
 
-    print(f"  📂 已加载 {len(result)} 条 ({source}, {day})")
+    print(f"  [load] {len(result)} records ({source}, {day})")
     return result
 
 
@@ -231,7 +231,7 @@ def migrate_json_data():
     imported = 0
 
     if not os.path.isdir(DATA_DIR):
-        print("⚠ 数据目录不存在，跳过迁移")
+        print("[warn] data dir not found, skip migration")
         return 0
 
     for item in os.listdir(DATA_DIR):
@@ -258,7 +258,7 @@ def migrate_json_data():
                 count = _import_json_file(filepath, source_key, day)
                 imported += count
 
-    print(f"✅ 迁移完成，共导入 {imported} 条记录")
+    print(f"[done] migration complete, {imported} records imported")
     return imported
 
 
@@ -279,7 +279,7 @@ def _import_json_file(filepath: str, source_key: str, day: str) -> int:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
-        print(f"  ⚠ 读取失败 {filepath}: {e}")
+        print(f"  [warn] failed to read {filepath}: {e}")
         conn.close()
         return 0
 
@@ -319,7 +319,7 @@ def _import_json_file(filepath: str, source_key: str, day: str) -> int:
     """, rows)
     conn.commit()
     conn.close()
-    print(f"  📥 导入 {len(rows)} 条 <- {filepath}")
+    print(f"  [import] {len(rows)} records <- {filepath}")
     return len(rows)
 
 

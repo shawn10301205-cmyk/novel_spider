@@ -35,7 +35,7 @@ def _run_scheduled_sync():
     """定时同步任务：全量抓取所有数据源"""
     global _last_sync_result
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"⏰ [{now}] 定时同步任务开始...")
+    print(f"[sync] [{now}] scheduled sync started...")
     errors = []
     total = 0
     for source_key, entry in SCRAPER_REGISTRY.items():
@@ -46,10 +46,10 @@ def _run_scheduled_sync():
                 save_data(source_key, novels)
                 count = len(novels)
                 total += count
-                print(f"  ✅ {entry['name']}: {count} 条")
+                print(f"  [ok] {entry['name']}: {count} records")
         except Exception as e:
             errors.append(f"{entry['name']}: {e}")
-            print(f"  ❌ {entry['name']}: {e}")
+            print(f"  [err] {entry['name']}: {e}")
 
     _last_sync_result = {
         "time": now,
@@ -57,7 +57,7 @@ def _run_scheduled_sync():
         "total": total,
         "errors": errors,
     }
-    print(f"⏰ [{now}] 定时同步完成，共 {total} 条")
+    print(f"[sync] [{now}] sync done, total {total} records")
 
     # 发送飞书群通知
     try:
@@ -77,7 +77,7 @@ def _run_scheduled_sync():
                     results[sk] = {"name": ent["name"], "count": 0, "from_storage": False}
             notifier.send_scrape_report(results, total, day, errors)
     except Exception as e:
-        print(f"  ⚠ 飞书通知发送失败: {e}")
+        print(f"  [warn] feishu notify failed: {e}")
 
     # 调度下一次
     _schedule_next()
@@ -109,7 +109,7 @@ def _schedule_next():
             target += datetime.timedelta(days=1)
 
         delay = (target - now).total_seconds()
-        print(f"⏰ 下次同步时间: {target.strftime('%Y-%m-%d %H:%M')} (约 {delay/3600:.1f} 小时后)")
+        print(f"[schedule] 下次同步时间: {target.strftime('%Y-%m-%d %H:%M')} (约 {delay/3600:.1f} 小时后)")
 
         _scheduler_timer = threading.Timer(delay, _run_scheduled_sync)
         _scheduler_timer.daemon = True
@@ -252,7 +252,7 @@ def api_scrape_all_sources():
                 data = _scrape_and_save(source_key, gender, period)
                 all_data.extend(data)
             except Exception as e:
-                print(f"⚠ {entry['name']} 抓取失败: {e}")
+                print(f"[warn] {entry['name']} scrape failed: {e}")
     else:
         # 只读缓存
         if day is None:
@@ -323,25 +323,12 @@ def api_fetch_all():
 
     total = sum(r["count"] for r in results.values())
 
-    # 自动发送飞书群通知
-    notify = request.args.get("notify", "1") != "0"
-    notified = False
-    if notify and total > 0:
-        config = load_config()
-        feishu_cfg = config.get("feishu", {})
-        webhook_url = feishu_cfg.get("webhook_url", "")
-        app_url = feishu_cfg.get("app_url", "")
-        if webhook_url:
-            notifier = FeishuWebhookNotifier(webhook_url, app_url)
-            notified = notifier.send_scrape_report(results, total, day, errors)
-
     return jsonify({
         "code": 0,
         "data": results,
         "total": total,
         "date": day,
         "errors": errors,
-        "notified": notified,
     })
 
 
