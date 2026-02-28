@@ -38,6 +38,16 @@ const GENDER_COLORS = {
 };
 
 // ============================================================
+// 登出
+// ============================================================
+async function doLogout() {
+    try {
+        await fetch('/api/logout', { method: 'POST' });
+    } catch (e) { /* ignore */ }
+    window.location.href = '/login.html';
+}
+
+// ============================================================
 // 初始化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {

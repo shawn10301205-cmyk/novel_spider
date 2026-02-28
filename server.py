@@ -9,9 +9,11 @@ from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session, redirect
 from flask_cors import CORS
 import yaml
+import hashlib
+import secrets
 
 from scrapers import SCRAPER_REGISTRY
 from sorter import apply_sort
@@ -22,7 +24,63 @@ from models.novel import NovelRank
 from downloader import FanqieDownloader
 
 app = Flask(__name__, static_folder="web", static_url_path="")
+app.secret_key = secrets.token_hex(32)
 CORS(app)
+
+
+# ============================================================
+# 认证系统
+# ============================================================
+
+@app.before_request
+def check_auth():
+    """请求前检查登录状态"""
+    # 放行登录页和登录 API
+    skip_paths = ['/login.html', '/api/login', '/api/auth/check']
+    if request.path in skip_paths:
+        return
+    # 放行静态资源（CSS/JS/字体等）—— 登录页需要
+    if request.path.startswith('/api/') or request.path == '/' or request.path.endswith('.html'):
+        if not session.get('user'):
+            # API 请求返回 401 JSON
+            if request.path.startswith('/api/'):
+                return jsonify({"code": 401, "msg": "未登录"}), 401
+            # 页面请求重定向到登录
+            return redirect('/login.html')
+
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    """登录"""
+    data = request.get_json(force=True)
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+
+    config = load_config()
+    users = config.get('auth', {}).get('users', [])
+
+    for u in users:
+        if u.get('username') == username and u.get('password') == password:
+            session['user'] = username
+            return jsonify({"code": 0, "msg": "登录成功", "data": {"username": username}})
+
+    return jsonify({"code": 1, "msg": "用户名或密码错误"})
+
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    """登出"""
+    session.pop('user', None)
+    return jsonify({"code": 0, "msg": "已退出"})
+
+
+@app.route('/api/auth/check')
+def api_auth_check():
+    """检查登录状态"""
+    user = session.get('user')
+    if user:
+        return jsonify({"code": 0, "data": {"logged_in": True, "username": user}})
+    return jsonify({"code": 0, "data": {"logged_in": False}})
 
 # ============================================================
 # 定时调度器

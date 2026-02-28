@@ -16,3 +16,13 @@ scrape:
 download:
   tomato_url: 'http://127.0.0.1:18423'
   request_timeout: 15
+auth:
+  users:
+    - username: admin
+      password: admin123
+    - username: editor
+      password: editor123
+    - username: viewer1
+      password: viewer123
+    - username: viewer2
+      password: viewer123
