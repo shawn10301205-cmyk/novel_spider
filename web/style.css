@@ -2681,7 +2681,7 @@ body {
     right: 0;
     bottom: 0;
     z-index: 200;
-    background: var(--md-surface);
+    background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 35%, var(--bg-gradient-3) 65%, var(--bg-gradient-4) 100%);
     overflow-y: auto;
     animation: dlPageIn 0.3s var(--ease-out);
 }
