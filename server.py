@@ -960,6 +960,16 @@ def _auto_start_tomato():
     if not tomato_url or not tomato_path:
         return
 
+    # 相对路径基于项目根目录解析
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    tomato_path = os.path.normpath(os.path.join(base_dir, tomato_path))
+    if tomato_data_dir:
+        tomato_data_dir = os.path.normpath(os.path.join(base_dir, tomato_data_dir))
+
+    if not os.path.isfile(tomato_path):
+        print(f"[tomato] 可执行文件不存在: {tomato_path}")
+        return
+
     # 检查是否已经在运行
     import requests as req
     try:
@@ -975,12 +985,14 @@ def _auto_start_tomato():
     if tomato_data_dir:
         cmd.extend(["--data-dir", tomato_data_dir])
 
+    cwd = tomato_data_dir or os.path.dirname(tomato_path)
+    log_path = os.path.join(cwd, "tomato.log")
     print(f"[tomato] 自动启动: {' '.join(cmd)}")
     subprocess.Popen(
         cmd,
-        stdout=open(os.path.join(os.path.dirname(tomato_path), "tomato.log"), "a"),
+        stdout=open(log_path, "a"),
         stderr=subprocess.STDOUT,
-        cwd=tomato_data_dir or os.path.dirname(tomato_path),
+        cwd=cwd,
     )
     print("[tomato] Tomato 服务已启动")
 
