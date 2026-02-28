@@ -921,6 +921,8 @@ function selectChip(el, type) {
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     state[type] = el.dataset.value;
+    // 切换频道时自动加载数据
+    if (type === 'gender') doScrape();
 }
 
 function toggleTheme() {
