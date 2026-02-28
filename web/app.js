@@ -1809,7 +1809,10 @@ async function dlRefreshLibrary() {
                     <div class="dl-lib-title">${escapeHtml(title)}</div>
                     <div class="dl-lib-meta">${ext}${size ? ' · ' + size : ''}</div>
                 </div>
-                <span class="tag tag-source">✅ 已下载</span>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <a class="btn btn-primary btn-sm" href="/api/book/download/file?filename=${encodeURIComponent(fileName)}" download="${escapeHtml(fileName)}" style="text-decoration:none;font-size:0.75rem;padding:4px 12px">⬇ 下载</a>
+                    <span class="tag tag-source">✅ 已下载</span>
+                </div>
             </div>`;
         }).join('');
     } catch (e) {

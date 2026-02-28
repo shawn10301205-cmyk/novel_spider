@@ -944,6 +944,42 @@ def api_book_library():
     return jsonify({"code": 0, "data": items, "total": len(items)})
 
 
+@app.route("/api/book/download/file")
+def api_book_download_file():
+    """下载书库中的文件到本地"""
+    import requests as req
+    from flask import Response
+
+    filename = request.args.get("filename", "")
+    if not filename:
+        return jsonify({"code": 1, "msg": "缺少 filename 参数"}), 400
+
+    config = load_config()
+    tomato_url = config.get("download", {}).get("tomato_url", "")
+    if not tomato_url:
+        return jsonify({"code": 1, "msg": "Tomato 未配置"}), 500
+
+    try:
+        resp = req.get(
+            f"{tomato_url}/api/library/download",
+            params={"path": filename},
+            stream=True,
+            timeout=30,
+        )
+        resp.raise_for_status()
+
+        return Response(
+            resp.iter_content(chunk_size=8192),
+            content_type=resp.headers.get("content-type", "application/octet-stream"),
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": resp.headers.get("content-length", ""),
+            },
+        )
+    except Exception as e:
+        return jsonify({"code": 1, "msg": f"下载失败: {str(e)}"}), 500
+
+
 # ============================================================
 # 自动启动 Tomato 服务
 # ============================================================
