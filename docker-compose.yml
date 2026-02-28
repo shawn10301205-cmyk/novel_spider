@@ -9,7 +9,7 @@ services:
     container_name: tomato-dl
     restart: unless-stopped
     volumes:
-      - tomato_data:/app/data
+      - ./tomato-data:/app/data
     ports:
       - "127.0.0.1:18423:18423"
     healthcheck:
@@ -29,8 +29,8 @@ services:
       - "8081:8081"
     volumes:
       - ./config.local.yaml:/app/config.local.yaml:ro
-      - spider_data:/app/data
-      - tomato_data:/app/tomato_downloads
+      - ./data:/app/data
+      - ./tomato-downloads:/app/tomato_downloads
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:
@@ -41,9 +41,3 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
-volumes:
-  spider_data:
-    driver: local
-  tomato_data:
-    driver: local
