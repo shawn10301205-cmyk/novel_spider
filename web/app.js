@@ -920,9 +920,17 @@ function selectSource(el) {
 function selectChip(el, type) {
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
-    state[type] = el.dataset.value;
-    // 切换频道时自动加载数据
-    if (type === 'gender') doScrape();
+    const val = el.dataset.value;
+
+    if (type === 'gender' && val === '_category') {
+        // 分类排行按钮：清掉 gender 筛选，切换到分类视图
+        state.gender = '';
+        switchDataView('category');
+        loadCategoryRankInline();
+    } else {
+        state[type] = val;
+        if (type === 'gender') doScrape();
+    }
 }
 
 function toggleTheme() {
