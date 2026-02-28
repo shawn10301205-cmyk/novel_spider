@@ -1,0 +1,28 @@
+# Docker 部署示例配置
+# 复制为 config.local.yaml 并修改
+
+feishu:
+  app_id: ''
+  app_secret: ''
+  app_token: ''
+  table_id: ''
+  webhook_url: ''
+  app_url: ''
+
+download:
+  # Docker 内部通过容器名访问 Tomato
+  tomato_url: 'http://tomato:18423'
+  # Docker 环境下共享 volume 路径
+  tomato_data_dir: '/app/tomato_downloads'
+  # Docker 内不需要 tomato_path，由 docker compose 管理启动
+
+auth:
+  users:
+    - username: admin
+      password: changeme
+    - username: editor
+      password: changeme
+    - username: viewer1
+      password: changeme
+    - username: viewer2
+      password: changeme

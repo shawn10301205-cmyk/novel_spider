@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # Tomato Novel Downloader 服务
+  # ============================================================
+  tomato:
+    image: ghcr.io/zhongbai2333/tomato-novel-downloader:latest
+    container_name: tomato-dl
+    restart: unless-stopped
+    volumes:
+      - tomato_data:/app/data
+    ports:
+      - "127.0.0.1:18423:18423"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18423/api/config"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================
+  # Novel Spider 主服务
+  # ============================================================
+  novel_spider:
+    build: .
+    container_name: novel-spider
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./config.local.yaml:/app/config.local.yaml:ro
+      - spider_data:/app/data
+      - tomato_data:/app/tomato_downloads
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      tomato:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/auth/check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  spider_data:
+    driver: local
+  tomato_data:
+    driver: local
