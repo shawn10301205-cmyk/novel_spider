@@ -11,3 +11,7 @@ data/
 .venv/
 config.local.yaml
 docs/
+server.log
+tomato.log
+tomato-data/
+tomato-downloads/
