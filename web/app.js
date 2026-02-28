@@ -1803,19 +1803,46 @@ async function dlRefreshLibrary() {
             const title = fileName.replace(/\.[^.]+$/, '') || '未知';
             const ext = (item.ext || item.format || 'epub').toUpperCase();
             const size = item.size ? (item.size > 1048576 ? (item.size / 1048576).toFixed(1) + ' MB' : (item.size / 1024).toFixed(0) + ' KB') : '';
+            const sizeWarn = item.size && item.size < 200 * 1024 ? ' ⚠️' : '';
 
             return `<div class="dl-lib-item">
                 <div>
                     <div class="dl-lib-title">${escapeHtml(title)}</div>
-                    <div class="dl-lib-meta">${ext}${size ? ' · ' + size : ''}</div>
+                    <div class="dl-lib-meta">${ext}${size ? ' · ' + size + sizeWarn : ''}</div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
+                    <button class="btn btn-sm" onclick="dlUpdateBookPrompt('${escapeHtml(title)}')" style="font-size:0.75rem;padding:4px 12px;background:var(--md-tertiary);color:#fff;border:none;border-radius:20px;cursor:pointer">🔄 更新</button>
                     <a class="btn btn-primary btn-sm" href="/api/book/download/file?filename=${encodeURIComponent(fileName)}" download="${escapeHtml(fileName)}" style="text-decoration:none;font-size:0.75rem;padding:4px 12px">⬇ 下载</a>
-                    <span class="tag tag-source">✅ 已下载</span>
                 </div>
             </div>`;
         }).join('');
     } catch (e) {
         // 静默失败
+    }
+}
+
+// 更新已下载的书（需要输入 book_id）
+async function dlUpdateBookPrompt(title) {
+    const bookId = prompt(`请输入《${title}》的 book_id（可在搜索结果中查看）：`);
+    if (!bookId || !bookId.trim()) return;
+    await dlUpdateBook(bookId.trim());
+}
+
+async function dlUpdateBook(bookId) {
+    try {
+        showToast('提交更新任务...');
+        const res = await api('/api/book/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ book_id: bookId, mode: 'update' }),
+        });
+        if (res.code === 0) {
+            showToast('✅ 更新任务已提交');
+            dlRefreshJobs();
+        } else {
+            showToast('❌ ' + (res.msg || '更新失败'));
+        }
+    } catch (e) {
+        showToast('❌ 网络错误');
     }
 }

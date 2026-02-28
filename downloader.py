@@ -352,18 +352,26 @@ class FanqieDownloader:
 
     # ── 下载功能（通过 Tomato API）────────────────────
 
-    def start_download(self, book_id: str) -> dict:
+    def start_download(self, book_id: str, mode: str = "download") -> dict:
         """
         提交下载任务到 Tomato 服务
+
+        Args:
+            book_id: 书籍 ID
+            mode: "download" 全量下载 / "update" 增量更新
 
         Returns:
             {"success": True, "job_id": 1, "state": "queued"}
             {"success": False, "error": "..."}
         """
         try:
+            payload = {"book_id": book_id}
+            if mode == "update":
+                payload["mode"] = "update"
+
             resp = requests.post(
                 f"{self.tomato_url}/api/jobs",
-                json={"book_id": book_id},
+                json=payload,
                 timeout=self.timeout,
             )
             data = resp.json()

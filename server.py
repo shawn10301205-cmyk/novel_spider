@@ -893,11 +893,12 @@ def api_book_download():
     """提交下载任务到 Tomato 服务"""
     body = request.get_json(force=True)
     book_id = body.get("book_id", "").strip()
+    mode = body.get("mode", "download")  # download / update
     if not book_id:
         return jsonify({"code": 1, "msg": "缺少 book_id 参数"})
 
     dl = _get_downloader()
-    result = dl.start_download(book_id)
+    result = dl.start_download(book_id, mode=mode)
 
     if result["success"]:
         return jsonify({"code": 0, "data": result})
