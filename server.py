@@ -944,8 +944,50 @@ def api_book_library():
     return jsonify({"code": 0, "data": items, "total": len(items)})
 
 
+# ============================================================
+# 自动启动 Tomato 服务
+# ============================================================
+import subprocess
+
+def _auto_start_tomato():
+    """如果 Tomato 服务未运行，自动启动它"""
+    config = load_config()
+    dl_cfg = config.get("download", {})
+    tomato_url = dl_cfg.get("tomato_url", "")
+    tomato_path = dl_cfg.get("tomato_path", "")
+    tomato_data_dir = dl_cfg.get("tomato_data_dir", "")
+
+    if not tomato_url or not tomato_path:
+        return
+
+    # 检查是否已经在运行
+    import requests as req
+    try:
+        resp = req.get(f"{tomato_url}/api/config", timeout=2)
+        if resp.status_code == 200:
+            print("[tomato] Tomato 服务已运行")
+            return
+    except Exception:
+        pass
+
+    # 启动 Tomato
+    cmd = [tomato_path, "--server"]
+    if tomato_data_dir:
+        cmd.extend(["--data-dir", tomato_data_dir])
+
+    print(f"[tomato] 自动启动: {' '.join(cmd)}")
+    subprocess.Popen(
+        cmd,
+        stdout=open(os.path.join(os.path.dirname(tomato_path), "tomato.log"), "a"),
+        stderr=subprocess.STDOUT,
+        cwd=tomato_data_dir or os.path.dirname(tomato_path),
+    )
+    print("[tomato] Tomato 服务已启动")
+
+
 if __name__ == "__main__":
     # 初始化数据库 & 启动时自动调度
     init_db()
     _schedule_next()
+    _auto_start_tomato()
     app.run(host="0.0.0.0", port=8081, debug=True)
