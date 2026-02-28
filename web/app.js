@@ -98,6 +98,8 @@ async function loadCategories() {
 // ============================================================
 // Tab 切换
 // ============================================================
+let _dlJobsTimer = null;
+
 function switchTab(tab) {
     state.currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -109,11 +111,33 @@ function switchTab(tab) {
     if (tab === 'rank') {
         document.getElementById('dataDisplaySection').style.display = '';
         document.getElementById('emptyState').style.display = 'none';
-        // 有缓存直接渲染，不重新请求
         loadCategoryRankInline();
         if (state.results.length === 0) {
             switchDataView('category');
         }
+    }
+}
+
+// 下载管理页面 — 全屏覆盖
+function toggleDownloadPage() {
+    const overlay = document.getElementById('dlPageOverlay');
+    const isOpen = overlay.style.display !== 'none';
+
+    if (isOpen) {
+        // 关闭
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        if (_dlJobsTimer) { clearInterval(_dlJobsTimer); _dlJobsTimer = null; }
+    } else {
+        // 打开
+        overlay.style.display = '';
+        document.body.style.overflow = 'hidden';
+        dlCheckStatus();
+        dlRefreshJobs();
+        dlRefreshLibrary();
+        // 启动自动刷新任务列表
+        if (_dlJobsTimer) clearInterval(_dlJobsTimer);
+        _dlJobsTimer = setInterval(dlRefreshJobs, 5000);
     }
 }
 
@@ -1293,14 +1317,26 @@ async function openNovelTrend(title, sourceName) {
         // 查找书籍链接（从最新数据中取）
         let bookUrl = '';
         for (const d of data) {
-            // 尝试从 raw 数据获取 book_url
             if (d.book_url) { bookUrl = d.book_url; break; }
         }
 
-        // 查看书本按钮
+        // 提取 book_id（番茄 URL: fanqienovel.com/page/BOOK_ID）
+        let bookId = '';
         if (bookUrl) {
-            html = `<div class="trend-action-bar"><a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">📖 查看书本</a></div>` + html;
+            const m = bookUrl.match(/\/page\/(\d+)/);
+            if (m) bookId = m[1];
         }
+
+        // 操作按钮栏
+        let actionHtml = '<div class="trend-action-bar">';
+        if (bookUrl) {
+            actionHtml += `<a href="${escapeHtml(bookUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">📖 查看书本</a>`;
+        }
+        if (bookId) {
+            actionHtml += `<button class="btn btn-secondary btn-sm" id="btnDownloadNovel" onclick="downloadNovel('${bookId}', this)">⬇️ 下载小说</button>`;
+        }
+        actionHtml += '</div>';
+        html = actionHtml + html;
 
         // 图表容器
         html += `<div class="trend-chart-wrap"><canvas id="trendCanvas" width="660" height="280"></canvas></div>`;
@@ -1330,6 +1366,69 @@ async function openNovelTrend(title, sourceName) {
 
 function closeTrendModal() {
     document.getElementById('trendModal').style.display = 'none';
+}
+
+// 下载小说
+async function downloadNovel(bookId, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = '⏳ 提交中...';
+
+    try {
+        const res = await api('/api/book/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ book_id: bookId }),
+        });
+
+        if (res.code === 0) {
+            showToast('success', '下载任务已提交！');
+            btnEl.textContent = '✅ 已提交';
+            // 轮询进度
+            pollDownloadStatus(bookId, btnEl);
+        } else {
+            showToast('error', res.msg || '下载失败');
+            btnEl.disabled = false;
+            btnEl.textContent = '⬇️ 下载小说';
+        }
+    } catch (e) {
+        showToast('error', '下载请求失败: ' + e.message);
+        btnEl.disabled = false;
+        btnEl.textContent = '⬇️ 下载小说';
+    }
+}
+
+// 轮询下载进度
+async function pollDownloadStatus(bookId, btnEl) {
+    const poll = async () => {
+        try {
+            const res = await api(`/api/book/download/status?book_id=${bookId}`);
+            const jobs = res.data || [];
+            if (jobs.length === 0) {
+                btnEl.textContent = '⬇️ 下载小说';
+                btnEl.disabled = false;
+                return;
+            }
+            const job = jobs[0];
+            if (job.status === 'done') {
+                btnEl.textContent = '✅ 下载完成';
+                showToast('success', `${job.title || '小说'} 下载完成！`);
+                return;
+            } else if (job.status === 'error') {
+                btnEl.textContent = '❌ 下载失败';
+                btnEl.disabled = false;
+                showToast('error', job.message || '下载失败');
+                return;
+            } else {
+                const pct = job.total > 0 ? Math.round(job.done / job.total * 100) : 0;
+                btnEl.textContent = `⏳ ${pct}%`;
+                setTimeout(poll, 3000);
+            }
+        } catch (e) {
+            btnEl.textContent = '⬇️ 下载小说';
+            btnEl.disabled = false;
+        }
+    };
+    setTimeout(poll, 2000);
 }
 
 function drawTrendChart(data) {
@@ -1466,5 +1565,231 @@ function drawTrendChart(data) {
     if ((points.length - 1) % step !== 0) {
         const last = points[points.length - 1];
         ctx.fillText(last.label.slice(5), last.x, displayHeight - 10);
+    }
+}
+
+// ============================================================
+// 下载管理 Tab 功能
+// ============================================================
+
+// 检查 Tomato 服务状态
+async function dlCheckStatus() {
+    const dot = document.getElementById('dlStatusDot');
+    const text = document.getElementById('dlStatusText');
+    const ver = document.getElementById('dlStatusVersion');
+
+    try {
+        const res = await api('/api/tomato/check');
+        const data = res.data || {};
+        if (data.connected) {
+            dot.className = 'dl-status-dot online';
+            const cfg = data.config || {};
+            text.textContent = `Tomato 服务已连接${cfg.use_official_api ? ' · 官方API✅' : ''}`;
+            ver.textContent = `v${data.version || '?'}`;
+            ver.style.display = '';
+        } else {
+            dot.className = 'dl-status-dot offline';
+            text.textContent = `Tomato 服务未连接: ${data.error || '请确认服务已启动'}`;
+            ver.style.display = 'none';
+        }
+    } catch (e) {
+        dot.className = 'dl-status-dot offline';
+        text.textContent = '无法连接 Tomato 服务';
+        ver.style.display = 'none';
+    }
+}
+
+// 搜索
+async function dlSearch() {
+    const input = document.getElementById('dlSearchInput');
+    const q = input.value.trim();
+    if (!q) return;
+
+    const resultsSection = document.getElementById('dlSearchResults');
+    const listEl = document.getElementById('dlSearchList');
+    const countEl = document.getElementById('dlSearchCount');
+
+    resultsSection.style.display = '';
+    listEl.innerHTML = '<div class="dl-empty">搜索中...</div>';
+
+    // 判断是 book_id 还是关键词
+    const isBookId = /^\d{10,}$/.test(q);
+
+    try {
+        if (isBookId) {
+            // 直接查询书籍信息
+            const res = await api(`/api/book/info?book_id=${encodeURIComponent(q)}`);
+            if (res.code === 0 && res.data) {
+                const book = res.data;
+                countEl.textContent = '1';
+                listEl.innerHTML = renderDlSearchItem(book);
+            } else {
+                countEl.textContent = '0';
+                listEl.innerHTML = '<div class="dl-empty">未找到该书籍</div>';
+            }
+        } else {
+            // 搜索
+            const res = await api(`/api/book/search?q=${encodeURIComponent(q)}`);
+            const items = res.data || [];
+            countEl.textContent = items.length;
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="dl-empty">未找到相关书籍</div>';
+            } else {
+                listEl.innerHTML = items.map(b => renderDlSearchItem(b)).join('');
+            }
+        }
+    } catch (e) {
+        listEl.innerHTML = `<div class="dl-empty">搜索失败: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function renderDlSearchItem(book) {
+    const bookId = book.book_id || '';
+    const title = book.title || book.book_name || '未知';
+    const author = book.author || '-';
+    const category = book.category || '';
+    const wordCount = book.word_count ? (book.word_count > 10000 ? (book.word_count / 10000).toFixed(1) + '万字' : book.word_count + '字') : '';
+    const chapterCount = book.chapter_count || '';
+    const score = book.score ? `⭐${book.score.toFixed ? book.score.toFixed(1) : book.score}` : '';
+    const finished = book.finished === true ? '✅完结' : book.finished === false ? '📝连载' : '';
+
+    return `<div class="dl-search-item stagger-in">
+        <div class="dl-search-item-info">
+            <h4>${escapeHtml(title)}</h4>
+            <div class="dl-search-item-meta">
+                <span>✍️ ${escapeHtml(author)}</span>
+                ${category ? `<span>📚 ${escapeHtml(category)}</span>` : ''}
+                ${chapterCount ? `<span>📖 ${chapterCount}章</span>` : ''}
+                ${wordCount ? `<span>📝 ${wordCount}</span>` : ''}
+                ${score ? `<span>${score}</span>` : ''}
+                ${finished ? `<span>${finished}</span>` : ''}
+            </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="dlSubmitDownload('${escapeHtml(bookId)}', this)">⬇️ 下载</button>
+    </div>`;
+}
+
+// 提交下载
+async function dlSubmitDownload(bookId, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = '⏳ 提交中...';
+
+    try {
+        const res = await api('/api/book/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ book_id: bookId }),
+        });
+
+        if (res.code === 0) {
+            showToast('success', '下载任务已提交！');
+            btnEl.textContent = '✅ 已提交';
+            dlRefreshJobs();
+        } else {
+            showToast('error', res.msg || '提交失败');
+            btnEl.disabled = false;
+            btnEl.textContent = '⬇️ 下载';
+        }
+    } catch (e) {
+        showToast('error', '请求失败: ' + e.message);
+        btnEl.disabled = false;
+        btnEl.textContent = '⬇️ 下载';
+    }
+}
+
+// 刷新下载任务列表
+async function dlRefreshJobs() {
+    const container = document.getElementById('dlJobsList');
+
+    try {
+        const res = await api('/api/book/download/status');
+        const jobs = res.data || [];
+
+        if (jobs.length === 0) {
+            container.innerHTML = '<div class="dl-empty">暂无下载任务</div>';
+            return;
+        }
+
+        container.innerHTML = jobs.map(job => {
+            const pct = job.total > 0 ? Math.round(job.done / job.total * 100) : 0;
+            const statusLabel = {
+                queued: '排队中', running: '下载中', done: '已完成', error: '失败',
+            }[job.status] || job.status;
+
+            const progressClass = job.status === 'done' ? 'done' : '';
+
+            let actionHtml = '';
+            if (job.status === 'running' || job.status === 'queued') {
+                actionHtml = `<button class="btn btn-outline btn-sm" onclick="dlCancelJob(${job.job_id})">✖ 取消</button>`;
+            }
+
+            return `<div class="dl-job-item">
+                <div class="dl-job-header">
+                    <span class="dl-job-title">${escapeHtml(job.title || 'Book ' + job.book_id)}</span>
+                    <span class="dl-job-status ${job.status}">${statusLabel}</span>
+                </div>
+                <div class="dl-progress-bar">
+                    <div class="dl-progress-fill ${progressClass}" style="width:${pct}%"></div>
+                </div>
+                <div class="dl-job-meta">
+                    <span class="dl-job-chapters">${job.done}/${job.total} 章 · ${pct}%</span>
+                    ${actionHtml}
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        // 静默失败，不覆盖现有内容
+    }
+}
+
+// 取消下载
+async function dlCancelJob(jobId) {
+    try {
+        const res = await api('/api/book/download/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: jobId }),
+        });
+        if (res.code === 0) {
+            showToast('info', '已取消');
+            dlRefreshJobs();
+        } else {
+            showToast('error', res.msg || '取消失败');
+        }
+    } catch (e) {
+        showToast('error', '取消失败');
+    }
+}
+
+// 刷新书库
+async function dlRefreshLibrary() {
+    const container = document.getElementById('dlLibraryList');
+
+    try {
+        const res = await api('/api/book/library');
+        const items = res.data || [];
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="dl-empty">书库为空，下载完成后将在这里显示</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(item => {
+            // Tomato 返回的字段: name, ext, size, rel_path
+            const fileName = item.name || '';
+            const title = fileName.replace(/\.[^.]+$/, '') || '未知';
+            const ext = (item.ext || item.format || 'epub').toUpperCase();
+            const size = item.size ? (item.size > 1048576 ? (item.size / 1048576).toFixed(1) + ' MB' : (item.size / 1024).toFixed(0) + ' KB') : '';
+
+            return `<div class="dl-lib-item">
+                <div>
+                    <div class="dl-lib-title">${escapeHtml(title)}</div>
+                    <div class="dl-lib-meta">${ext}${size ? ' · ' + size : ''}</div>
+                </div>
+                <span class="tag tag-source">✅ 已下载</span>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        // 静默失败
     }
 }

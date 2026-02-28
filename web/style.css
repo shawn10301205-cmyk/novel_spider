@@ -2373,3 +2373,362 @@ body {
 .novel-card.clickable:hover .trend-hint {
     opacity: 1;
 }
+
+/* ============================================================
+   下载管理页面
+   ============================================================ */
+
+/* Tomato 连接状态栏 */
+.dl-status-bar {
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dl-status-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.dl-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--md-outline);
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+
+.dl-status-dot.online {
+    background: #22C55E;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.dl-status-dot.offline {
+    background: #EF4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+#dlStatusText {
+    font-size: 0.85rem;
+    color: var(--md-on-surface-variant);
+}
+
+.dl-status-version {
+    font-size: 0.75rem;
+    color: var(--md-outline);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    background: var(--md-surface-variant);
+}
+
+/* 搜索栏 */
+.dl-search-section {
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.dl-search-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.dl-search-bar svg {
+    color: var(--md-on-surface-variant);
+    flex-shrink: 0;
+}
+
+.dl-search-input {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--md-on-surface);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.dl-search-input:focus {
+    border-color: var(--md-primary);
+}
+
+/* Section header */
+.dl-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.dl-section-header svg {
+    color: var(--md-primary);
+    flex-shrink: 0;
+}
+
+.dl-section-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.dl-section-header .badge {
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.dl-section-header .btn {
+    margin-left: auto;
+}
+
+/* 空状态 */
+.dl-empty {
+    padding: var(--space-xl) var(--space-lg);
+    text-align: center;
+    color: var(--md-on-surface-variant);
+    font-size: 0.9rem;
+}
+
+/* 搜索结果卡片 */
+.dl-search-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--md-outline-variant);
+    transition: background 0.2s;
+}
+
+.dl-search-item:last-child {
+    border-bottom: none;
+}
+
+.dl-search-item:hover {
+    background: rgba(103, 80, 164, 0.04);
+}
+
+.dl-search-item-info h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: 4px;
+}
+
+.dl-search-item-meta {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+}
+
+.dl-search-item-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 下载任务卡片 */
+.dl-job-item {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.dl-job-item:last-child {
+    border-bottom: none;
+}
+
+.dl-job-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+}
+
+.dl-job-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+}
+
+.dl-job-status {
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+}
+
+.dl-job-status.queued {
+    background: var(--md-secondary-container);
+    color: var(--md-secondary);
+}
+
+.dl-job-status.running {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+[data-theme="dark"] .dl-job-status.running {
+    background: rgba(37, 99, 235, 0.2);
+    color: #60A5FA;
+}
+
+.dl-job-status.done {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+[data-theme="dark"] .dl-job-status.done {
+    background: rgba(22, 163, 74, 0.2);
+    color: #4ADE80;
+}
+
+.dl-job-status.error {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+[data-theme="dark"] .dl-job-status.error {
+    background: rgba(220, 38, 38, 0.2);
+    color: #F87171;
+}
+
+/* 进度条 */
+.dl-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--md-surface-variant);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: var(--space-xs);
+}
+
+.dl-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--md-primary), var(--md-primary-light));
+    border-radius: 3px;
+    transition: width 0.5s var(--ease-out);
+}
+
+.dl-progress-fill.done {
+    background: linear-gradient(90deg, #22C55E, #4ADE80);
+}
+
+.dl-job-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-xs);
+}
+
+.dl-job-chapters {
+    font-size: 0.75rem;
+    color: var(--md-on-surface-variant);
+}
+
+/* 书库条目 */
+.dl-lib-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.dl-lib-item:last-child {
+    border-bottom: none;
+}
+
+.dl-lib-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--md-on-surface);
+}
+
+.dl-lib-meta {
+    font-size: 0.8rem;
+    color: var(--md-on-surface-variant);
+    margin-top: 2px;
+}
+
+.btn-sm {
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    border-radius: var(--radius-md);
+}
+
+/* 下载管理 section 间距 */
+.dl-page-container .glass-card {
+    margin-bottom: var(--space-md);
+}
+
+/* 全屏覆盖页面 */
+.dl-page-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    background: var(--md-surface);
+    overflow-y: auto;
+    animation: dlPageIn 0.3s var(--ease-out);
+}
+
+@keyframes dlPageIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dl-page-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--space-md) var(--space-lg);
+    padding-bottom: var(--space-2xl);
+}
+
+.dl-page-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    position: sticky;
+    top: var(--space-md);
+    z-index: 201;
+}
+
+.dl-page-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-tertiary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dl-page-header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}

@@ -19,6 +19,7 @@ from exporters.feishu import FeishuExporter
 from exporters.webhook import FeishuWebhookNotifier
 from storage import has_data, load_data, save_data, list_dates, today_str, latest_date, get_novel_trend, init_db
 from models.novel import NovelRank
+from downloader import FanqieDownloader
 
 app = Flask(__name__, static_folder="web", static_url_path="")
 CORS(app)
@@ -765,6 +766,124 @@ def api_notify():
         return jsonify({"code": 0, "msg": "通知发送成功"})
     else:
         return jsonify({"code": 1, "msg": "通知发送失败"})
+
+
+# ============================================================
+# 下载相关 API（通过 Tomato-Novel-Downloader 代理）
+# ============================================================
+
+def _get_downloader():
+    config = load_config()
+    return FanqieDownloader(config.get("download", {}))
+
+
+@app.route("/api/tomato/check")
+def api_tomato_check():
+    """检查 Tomato 服务状态"""
+    dl = _get_downloader()
+    status = dl.check_tomato()
+    return jsonify({"code": 0, "data": status})
+
+
+@app.route("/api/book/info")
+def api_book_info():
+    """获取书籍详情"""
+    book_id = request.args.get("book_id", "").strip()
+    if not book_id:
+        return jsonify({"code": 1, "msg": "缺少 book_id 参数"})
+
+    dl = _get_downloader()
+    info = dl.get_book_info(book_id)
+
+    if not info:
+        return jsonify({"code": 1, "msg": "获取书籍信息失败"})
+
+    return jsonify({"code": 0, "data": info.to_dict()})
+
+
+@app.route("/api/book/search")
+def api_book_search():
+    """搜索小说"""
+    keyword = request.args.get("q", "").strip()
+    if not keyword:
+        return jsonify({"code": 1, "msg": "缺少搜索关键词"})
+
+    dl = _get_downloader()
+    results = dl.search_books(keyword)
+    return jsonify({"code": 0, "data": results, "total": len(results)})
+
+
+@app.route("/api/book/chapters")
+def api_book_chapters():
+    """获取书籍章节列表"""
+    book_id = request.args.get("book_id", "").strip()
+    if not book_id:
+        return jsonify({"code": 1, "msg": "缺少 book_id 参数"})
+
+    dl = _get_downloader()
+    chapters = dl.get_chapter_list(book_id)
+
+    return jsonify({
+        "code": 0,
+        "data": [ch.to_dict() for ch in chapters],
+        "total": len(chapters),
+    })
+
+
+@app.route("/api/book/download", methods=["POST"])
+def api_book_download():
+    """提交下载任务到 Tomato 服务"""
+    body = request.get_json(force=True)
+    book_id = body.get("book_id", "").strip()
+    if not book_id:
+        return jsonify({"code": 1, "msg": "缺少 book_id 参数"})
+
+    dl = _get_downloader()
+    result = dl.start_download(book_id)
+
+    if result["success"]:
+        return jsonify({"code": 0, "data": result})
+    else:
+        return jsonify({"code": 1, "msg": result["error"]})
+
+
+@app.route("/api/book/download/status")
+def api_book_download_status():
+    """查询下载进度"""
+    book_id = request.args.get("book_id", "").strip() or None
+
+    dl = _get_downloader()
+    jobs = dl.get_download_status(book_id)
+
+    return jsonify({
+        "code": 0,
+        "data": [j.to_dict() for j in jobs],
+        "total": len(jobs),
+    })
+
+
+@app.route("/api/book/download/cancel", methods=["POST"])
+def api_book_download_cancel():
+    """取消下载任务"""
+    body = request.get_json(force=True)
+    job_id = body.get("job_id")
+    if not job_id:
+        return jsonify({"code": 1, "msg": "缺少 job_id 参数"})
+
+    dl = _get_downloader()
+    ok = dl.cancel_download(int(job_id))
+    if ok:
+        return jsonify({"code": 0, "msg": "已取消"})
+    else:
+        return jsonify({"code": 1, "msg": "取消失败"})
+
+
+@app.route("/api/book/library")
+def api_book_library():
+    """获取已下载的书库"""
+    dl = _get_downloader()
+    items = dl.get_library()
+    return jsonify({"code": 0, "data": items, "total": len(items)})
 
 
 if __name__ == "__main__":

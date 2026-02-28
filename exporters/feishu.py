@@ -1,6 +1,7 @@
 """飞书多维表格推送导出器"""
 
 import json
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import requests
@@ -130,22 +131,28 @@ class FeishuExporter:
                 )
                 resp.raise_for_status()
 
+    @staticmethod
+    def _today_timestamp():
+        """获取今天 0 点的毫秒时间戳（北京时间）"""
+        tz = timezone(timedelta(hours=8))
+        today = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        return int(today.timestamp() * 1000)
+
     def _batch_create_records(self, novels: list[NovelRank]):
         """批量创建记录"""
         url = f"{self.BITABLE_URL}/apps/{self.app_token}/tables/{self.table_id}/records/batch_create"
 
+        today_ts = self._today_timestamp()
         records = []
         for novel in novels:
             fields = {
-                "排名": novel.rank,
-                "书名": novel.title,
+                "文本": novel.title,
                 "作者": novel.author,
                 "分类": novel.category,
-                "频道": novel.gender,
-                "榜单类型": novel.period,
-                "最新章节": novel.latest_chapter,
-                "书籍链接": {"text": novel.title, "link": novel.book_url} if novel.book_url else novel.title,
+                "热度": novel.rank,
+                "状态": novel.period if novel.period else "连载中",
                 "来源": novel.source,
+                "采集日期": today_ts,
             }
             records.append({"fields": fields})
 
@@ -162,15 +169,13 @@ class FeishuExporter:
         """
         print("📋 飞书多维表格所需字段：")
         fields = [
-            ("排名", "数字"),
-            ("书名", "文本"),
+            ("文本", "文本 (书名)"),
             ("作者", "文本"),
-            ("分类", "文本"),
-            ("频道", "单选 (男频/女频)"),
-            ("榜单类型", "单选 (阅读榜/新书榜)"),
-            ("最新章节", "文本"),
-            ("书籍链接", "超链接"),
+            ("分类", "单选 (玄幻/都市/科幻/...)"),
+            ("热度", "数字 (排名)"),
+            ("状态", "单选 (连载中/已完结/断更)"),
             ("来源", "文本"),
+            ("采集日期", "日期 (自动填充)"),
         ]
         for name, field_type in fields:
             print(f"  - {name}: {field_type}")

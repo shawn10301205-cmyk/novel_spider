@@ -10,6 +10,8 @@
     python main.py scrape --export feishu           # 推送到飞书
     python main.py scrape --sort category           # 按分类排序
     python main.py scrape --group category          # 按分类分组展示
+    python main.py download 7143038691944959011     # 下载指定小说
+    python main.py download 7143038691944959011 --info-only   # 只查看信息
     python main.py categories                       # 列出所有可用分类
     python main.py feishu-fields                    # 显示飞书表格所需字段
 """
@@ -27,6 +29,7 @@ from scrapers.fanqie import FanqieScraper
 from exporters.console import ConsoleExporter
 from exporters.feishu import FeishuExporter
 from sorter import apply_sort, filter_by_gender, filter_by_category, filter_by_period
+from downloader import FanqieDownloader
 
 
 def _deep_merge(base: dict, override: dict) -> dict:
@@ -149,6 +152,38 @@ def cmd_feishu_fields(args, config):
     feishu.create_table_if_needed()
 
 
+def cmd_download(args, config):
+    """下载小说"""
+    dl_config = config.get("download", {})
+    dl = FanqieDownloader(dl_config)
+
+    if args.info_only:
+        info = dl.get_book_info(args.book_id)
+        if info:
+            print(f"书名: {info.title}")
+            print(f"作者: {info.author}")
+            print(f"简介: {info.description[:200]}")
+            print(f"标签: {', '.join(info.tags)}")
+            print(f"章节数: {info.chapter_count}")
+            print(f"完结: {info.finished}")
+        else:
+            print("❌ 获取书籍信息失败")
+    elif args.chapters_only:
+        chapters = dl.get_chapter_list(args.book_id)
+        print(f"共 {len(chapters)} 章:")
+        for i, ch in enumerate(chapters[:30], 1):
+            vol = f" [{ch.volume}]" if ch.volume else ""
+            print(f"  {i}. {ch.title}{vol}")
+        if len(chapters) > 30:
+            print(f"  ... (还有 {len(chapters) - 30} 章)")
+    else:
+        result = dl.download_book(args.book_id)
+        if result:
+            print(f"\n✅ 下载完成: {result}")
+        else:
+            print("\n❌ 下载失败")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="📚 小说排行榜爬虫 - 抓取、排序、推送",
@@ -211,6 +246,21 @@ def main():
     # feishu-fields 命令
     subparsers.add_parser("feishu-fields", help="显示飞书表格所需字段")
 
+    # download 命令
+    dl_parser = subparsers.add_parser("download", help="下载小说")
+    dl_parser.add_argument(
+        "book_id", type=str,
+        help="书籍 ID (从 fanqienovel.com/page/xxx 中获取)"
+    )
+    dl_parser.add_argument(
+        "--info-only", action="store_true",
+        help="只显示书籍信息，不下载"
+    )
+    dl_parser.add_argument(
+        "--chapters-only", action="store_true",
+        help="只显示章节列表，不下载"
+    )
+
     args = parser.parse_args()
 
     if not args.command:
@@ -225,6 +275,8 @@ def main():
         cmd_categories(args, config)
     elif args.command == "feishu-fields":
         cmd_feishu_fields(args, config)
+    elif args.command == "download":
+        cmd_download(args, config)
 
 
 if __name__ == "__main__":
