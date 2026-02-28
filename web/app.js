@@ -850,7 +850,10 @@ async function doScrape(force = false) {
 
         // 切换到热度视图
         switchDataView('heat');
-        loadCategoryRankInline();
+        // 选了男频/女频时不展示分类排行
+        if (!state.gender) {
+            loadCategoryRankInline();
+        }
 
         const msg = state.cached
             ? `已加载 ${state.results.length} 条缓存数据（${state.date}）`
